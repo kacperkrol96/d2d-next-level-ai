@@ -2,7 +2,8 @@ import { ExternalLink } from "lucide-react";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
 import { formatPLN } from "@/lib/domain/money";
-import { getEarnings, type CommissionEntry } from "@/lib/services/orbit";
+import { getOrbitData, type CommissionEntry } from "@/lib/services/orbit";
+import { SettlementLines } from "@/components/settlement/SettlementLines";
 
 function EntryList({ entries, tone }: { entries: CommissionEntry[]; tone: "green" | "grey" | "cancelled" }) {
   if (entries.length === 0) return <p className="text-sm text-muted">Brak pozycji.</p>;
@@ -31,8 +32,9 @@ function EntryList({ entries, tone }: { entries: CommissionEntry[]; tone: "green
 
 export default async function SkarbiecPage() {
   const user = await requireRole(["auditor", "sales", "manager"]);
-  const earnings = await getEarnings(user);
-  if (!earnings) return <PageHeader title="Skarbiec" subtitle="Brak danych prowizji." />;
+  const orbit = await getOrbitData(user);
+  const earnings = orbit?.earnings;
+  if (!orbit || !earnings) return <PageHeader title="Skarbiec" subtitle="Brak danych prowizji." />;
 
   const green = earnings.entries.filter((e) => e.state === "green");
   const grey = earnings.entries.filter((e) => e.state === "grey");
@@ -53,6 +55,15 @@ export default async function SkarbiecPage() {
       </div>
       <div className="flex flex-col gap-4">
         <Card>
+          <CardTitle hint="podgląd · akceptacja w Etapie 3">Rozliczenie bieżącego okresu</CardTitle>
+          <SettlementLines
+            lines={orbit.settlement.lines}
+            payable={orbit.settlement.payable}
+            carryOver={orbit.settlement.carryOver}
+            fleetMonths={orbit.settlement.fleetMonths}
+          />
+        </Card>
+        <Card>
           <CardTitle hint={`${green.length}`}>Zarobione</CardTitle>
           <EntryList entries={green} tone="green" />
         </Card>
@@ -66,10 +77,6 @@ export default async function SkarbiecPage() {
             <EntryList entries={cancelled} tone="cancelled" />
           </Card>
         )}
-        <Card>
-          <CardTitle>Rozliczenia do akceptacji</CardTitle>
-          <p className="text-sm text-muted">Rozliczenia co 2 tygodnie pojawią się tutaj w Etapie 3 (po akceptacji zarządu w Mennicy).</p>
-        </Card>
       </div>
     </div>
   );

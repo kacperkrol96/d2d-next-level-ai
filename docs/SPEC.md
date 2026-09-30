@@ -41,7 +41,12 @@ Audytor, Handlowiec (widzi też swój zespół audytorów), Manager, Zarząd/Adm
 ## Zasady prowizji
 
 - Rozliczamy ZA KLIENTA, nie za umowę (termo + kocioł u jednego klienta = jedna prowizja).
-- **Handlowiec**: prowizja zielona od statusu „wysłanie wniosku do WFOŚ” lub dalej. Umowa „sam VAT” = prowizja −75%. Nadmarża od kwoty netto, limit 10% wartości umowy, udział wg poziomu. Brak minimum do utrzymania poziomu.
+- **Solo / Duet** to zakres umów u JEDNEGO klienta (nie liczba handlowców):
+  - **Solo** = klient z jedną umową (samo termo ALBO samo źródło ciepła),
+  - **Duet** = klient z dwiema umowami: termomodernizacja + źródło ciepła („prace po korek”).
+  - Stawka należy się w całości handlowcowi przypisanemu do klienta — nic nie dzielimy między handlowców.
+  - Solo/Duet rozpoznajemy automatycznie po rodzajach umów klienta w CRM. Lista rodzajów umów należących do „termo” i do „źródła ciepła” jest w konfiguracji (edytuje admin).
+- **Handlowiec**: prowizja zielona od statusu „wysłanie wniosku do WFOŚ” lub dalej. Umowa „sam VAT” = prowizja −75%. Nadmarża od kwoty netto, limit 10% wartości umowy, udział wg poziomu. Brak minimum do utrzymania poziomu. Od poziomu 5 wzwyż do progów awansu wliczają się klienci całego zespołu (jego + wszystkich podległych handlowców); próg „od którego poziomu” jest edytowalny w panelu admina.
 - **Audytor**: prowizja zielona od statusu umowy audytowej „po pomiarach”. Stawka zależy od progu dochodowego klienta (podstawowy/podwyższony/najwyższy). Bonus za zamknięcie — zawsze, gdy handlowiec zamknie klienta z audytu tego audytora. Poziom zdobyty raz zostaje na zawsze. Od poziomu 5 liczą się klienci struktury + aktywne osoby. Manager dostaje dyferencję.
 - Wypłata = prowizja × mnożnik KPI.
 - Rozliczenia co 2 tygodnie.
@@ -49,6 +54,8 @@ Audytor, Handlowiec (widzi też swój zespół audytorów), Manager, Zarząd/Adm
 - WSZYSTKIE stawki, progi, wagi i procenty w bazie, edytowalne przez admina. Zero liczb na sztywno w kodzie.
 
 ## Tabela — handlowcy (dane startowe)
+
+Solo = klient z jedną umową, Duet = klient z termo + źródłem ciepła. „Klientów do awansu” od poziomu 5 = klienci całego zespołu.
 
 | Lvl | Stanowisko | Solo | Duet | Klientów do awansu | Udział w nadmarży |
 |---|---|---|---|---|---|
@@ -88,7 +95,7 @@ Mechanika (obie role): każde KPI oceniane na poziomie I–V (1–5 pkt) × waga
 
 | Wynik | Mnożnik |
 |---|---|
-| 0–29 | poniżej minimum (alert do managera) |
+| 0–29 | 75% + alert do managera + żółta kartka (zapis w historii osoby) |
 | 30–45 | 75% |
 | 46–58 | 80% |
 | 59–69 | 90% |
@@ -120,9 +127,13 @@ Mechanika (obie role): każde KPI oceniane na poziomie I–V (1–5 pkt) × waga
 - **Czas podpisania oferty** — średni czas od statusu „oferta przekazana do handlowca” do podpisania umowy (z historii statusów w CRM). Oferta niepodpisana po 7 dniach wchodzi do średniej jako 7 dni.
 - **Wynik spółki** — % targetu miesiąca (target wpisuje admin).
 
+Żółte kartki: na razie kartka jest tylko zapisywana w historii osoby (najwyżej jedna na okres rozliczeniowy). Mechanizm kartek dla handlowców zdefiniujemy później.
+
 ## Flota (w Orbicie)
 
 Handlowiec z autem firmowym: liczymy klientów w miesiącu (status jak przy prowizji). 0–1 klient = 1500 zł, 2–3 = 750 zł, 4+ = 0 zł. Pasek 0/4 i aktualny koszt.
+
+Koszt auta za miesiąc jest potrącany automatycznie w najbliższym rozliczeniu po zakończeniu miesiąca (w okresie, który obejmuje 1. dzień następnego miesiąca). W Skarbcu i Mennicy widać go jako osobną pozycję „Flota”. Forma księgowa (potrącenie czy refaktura) do potwierdzenia z księgowym — nie blokuje budowy.
 
 ## Radar — zasada 3 dni
 
@@ -189,20 +200,32 @@ Next.js + TypeScript + Tailwind, Supabase (baza, logowanie Google, przechowywani
 
 ---
 
-## Założenia przyjęte w Etapie 0 (do potwierdzenia przez Kacpra)
+## Proces wydawania etapów
 
-Tam, gdzie specyfikacja nie rozstrzyga, przyjęliśmy poniższe zasady. Wszystkie są ustawieniami w konfiguracji — zmiana nie wymaga przepisywania kodu.
+- Każdy etap na osobnej gałęzi → Pull Request (automatyczne testy uruchamiają się przy każdym PR).
+- Kacper ogląda etap na linku podglądowym Vercel (preview) na iPadzie.
+- Scalenie do `main` (produkcja) TYLKO po akceptacji Kacpra.
+- Po każdym etapie: link do PR, link do podglądu (gdy Vercel będzie podłączony), lista rzeczy do przetestowania.
 
-1. **Mnożnik przy wyniku 0–29 pkt** — przyjęto 75% (jak najniższy przedział) + alert do managera. Może to być 0% — do decyzji.
-2. **Solo / Duet** — traktujemy jako rodzaj sprzedaży zapisany przy kliencie; stawka „Duet” należy się handlowcowi w całości (bez dzielenia).
-3. **„Sam VAT” przy kilku umowach klienta** — obniżka −75% tylko wtedy, gdy WSZYSTKIE umowy klienta są „sam VAT”. Obniżka dotyczy stawki podstawowej, nie nadmarży.
-4. **Limit nadmarży** — 10% sumy wartości netto wszystkich umów klienta; ujemna nadmarża nie obniża prowizji.
-5. **Bonus audytora za zamknięcie** — naliczany, gdy klient osiągnie ten sam status co zielona prowizja handlowca („wysłanie wniosku do WFOŚ”).
-6. **Klienci do awansu** — liczba łączna (od początku pracy), liczą się klienci z zieloną prowizją. U handlowców nie doliczamy klientów struktury (tabela tego nie mówi) — do potwierdzenia dla poziomów 6+.
-7. **Stawka wg poziomu** — prowizja liczona wg poziomu w chwili rozliczenia.
-8. **Brak danych KPI** (np. handlowiec bez audytorów) — to KPI jest pomijane, a wynik przeskalowany do 100 pkt.
-9. **Czas podpisania oferty** — każdy czas ograniczony z góry do 7 dni (także podpisane później).
-10. **Koszt floty** — potrącany z wypłaty w rozliczeniu (bez mnożnika KPI); wynagrodzenie za opiekę nad zespołem — dodawane bez mnożnika KPI.
-11. **Potrącenie większe niż wypłata** — wypłata 0 zł, reszta przechodzi na kolejny okres.
-12. **Okres rozliczeniowy** — 14 dni od poniedziałku 5.01.2026 (data startowa do zmiany w ustawieniach).
-13. **Nazwy statusów w CRM** — w danych testowych przyjęto przykładowe nazwy; w etapie integracji zmapujemy je 1:1 na prawdziwe statusy RRUP.
+## Hosting i koszty
+
+- Supabase: na czas budowy plan darmowy (tylko dane testowe). **Przed startem z prawdziwymi danymi: przejście na Pro + kopie zapasowe** (przypomnienie w `docs/PLAN.md`).
+- Vercel: plan Pro (projekt firmowy).
+
+## Założenia i decyzje
+
+Status: ✅ rozstrzygnięte przez Kacpra · ❓ otwarte (w kodzie działa rekomendacja, wszystko jest ustawieniem w konfiguracji).
+
+1. ✅ **KPI 0–29 pkt** — mnożnik 75% + alert do managera + żółta kartka zapisana w historii osoby. Zasady kartek — później.
+2. ✅ **Solo / Duet** — zakres umów u jednego klienta (Solo = jedna umowa: samo termo albo samo źródło ciepła; Duet = termo + źródło ciepła). Stawka w całości dla handlowca przypisanego do klienta. Rozpoznawane po rodzajach umów w CRM.
+3. ❓ **„Sam VAT”** — obniżka −75% tylko wtedy, gdy WSZYSTKIE umowy klienta są „sam VAT”; dotyczy stawki podstawowej, nie nadmarży. Otwarte: Duet, w którym tylko jedna umowa jest „sam VAT”.
+4. ❓ **Limit nadmarży** — 10% sumy wartości netto wszystkich umów klienta; ujemna nadmarża nie obniża prowizji.
+5. ❓ **Bonus audytora za zamknięcie** — naliczany, gdy klient osiągnie status „wysłanie wniosku do WFOŚ” (ten sam moment co zielona prowizja handlowca).
+6. ✅/❓ **Klienci do awansu** — handlowcy: od poziomu 5 wliczają się klienci całego zespołu (próg edytowalny) ✅. Otwarte: czy rezygnacja po zaliczeniu odejmuje klienta z licznika.
+7. ❓ **Stawka wg poziomu** — z którego momentu brać poziom do stawki.
+8. ❓ **Brak danych KPI** — KPI bez danych jest pomijane, a wynik przeskalowany do 100 pkt.
+9. ❓ **Czas podpisania oferty** — każdy czas ograniczony z góry do 7 dni (także oferty podpisane później).
+10. ✅/❓ **Flota i dodatki** — koszt auta potrącany automatycznie w najbliższym rozliczeniu, osobna pozycja „Flota” ✅. Otwarte: wynagrodzenie za opiekę nad zespołem bez mnożnika KPI.
+11. ❓ **Potrącenie większe niż wypłata** — wypłata 0 zł, reszta przechodzi na kolejny okres.
+12. ❓ **Start okresów rozliczeniowych** — co 14 dni od poniedziałku 5.01.2026.
+13. ❓ **Nazwy statusów i rodzajów umów w CRM** — w danych testowych przykładowe nazwy; mapowanie na prawdziwe nazwy z RRUP przy integracji.

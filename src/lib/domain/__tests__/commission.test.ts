@@ -6,25 +6,66 @@ import {
   auditorDifferential,
   differential,
   salesClientCommission,
+  salesScope,
   type SalesClientInput,
 } from "../commission";
 
 const sales = (level: number) => config.salesLevels.find((l) => l.level === level)!;
 const auditor = (level: number) => config.auditorLevels.find((l) => l.level === level)!;
 
+const termo = (valueNet = 100_000, surchargeNet = 0, samVat = false) => ({ kind: "Termomodernizacja", valueNet, surchargeNet, samVat });
+const kociol = (valueNet = 30_000, surchargeNet = 0, samVat = false) => ({ kind: "Kocioł", valueNet, surchargeNet, samVat });
+const pompa = (valueNet = 40_000, surchargeNet = 0, samVat = false) => ({ kind: "Pompa ciepła", valueNet, surchargeNet, samVat });
+
 const client = (overrides: Partial<SalesClientInput> = {}): SalesClientInput => ({
   status: "Wysłanie wniosku do WFOŚ",
-  mode: "solo",
-  agreements: [{ valueNet: 100_000, surchargeNet: 0, samVat: false }],
+  agreements: [termo()],
   ...overrides,
 });
 
+describe("Solo / Duet — zakres umów u jednego klienta", () => {
+  const cat = config.agreementCategories;
+
+  it("samo termo albo samo źródło ciepła = Solo", () => {
+    expect(salesScope([termo()], cat)).toBe("solo");
+    expect(salesScope([kociol()], cat)).toBe("solo");
+    expect(salesScope([pompa()], cat)).toBe("solo");
+  });
+
+  it("termo + źródło ciepła („prace po korek”) = Duet", () => {
+    expect(salesScope([termo(), kociol()], cat)).toBe("duo");
+    expect(salesScope([pompa(), termo()], cat)).toBe("duo");
+  });
+
+  it("dwie umowy z tej samej kategorii to nadal Solo", () => {
+    expect(salesScope([termo(), termo()], cat)).toBe("solo");
+    expect(salesScope([kociol(), pompa()], cat)).toBe("solo");
+  });
+
+  it("umowy spoza kategorii nie zmieniają zakresu", () => {
+    expect(salesScope([termo(), { kind: "Fotowoltaika" }], cat)).toBe("solo");
+  });
+
+  it("kategorie pochodzą z konfiguracji (edytowalne przez admina)", () => {
+    const custom = { thermo: ["Docieplenie"], heatSource: ["Kocioł"] };
+    expect(salesScope([{ kind: "Docieplenie" }, kociol()], custom)).toBe("duo");
+  });
+});
+
 describe("prowizja handlowca", () => {
-  it("solo i duet wg poziomu", () => {
-    expect(salesClientCommission(client(), sales(1), config).total).toBe(3000);
-    expect(salesClientCommission(client({ mode: "duo" }), sales(1), config).total).toBe(5000);
+  it("stawka Solo i Duet wg poziomu, w całości dla handlowca", () => {
+    expect(salesClientCommission(client(), sales(1), config)).toMatchObject({ scope: "solo", total: 3000 });
+    expect(salesClientCommission(client({ agreements: [termo(), kociol()] }), sales(1), config)).toMatchObject({ scope: "duo", total: 5000 });
     expect(salesClientCommission(client(), sales(10), config).total).toBe(8000);
-    expect(salesClientCommission(client({ mode: "duo" }), sales(10), config).total).toBe(9500);
+    expect(salesClientCommission(client({ agreements: [termo(), pompa()] }), sales(10), config).total).toBe(9500);
+  });
+
+  it("jeden klient z termo + kocioł = JEDNA prowizja Duet (nie 2 × Solo)", () => {
+    const result = salesClientCommission(client({ agreements: [termo(80_000, 2_000), kociol(30_000, 1_000)] }), sales(1), config);
+    expect(result.base).toBe(5000);
+    expect(result.surchargeCapped).toBe(3000);
+    expect(result.surchargePart).toBe(900); // 30% z 3000
+    expect(result.total).toBe(5900);
   });
 
   it("zielona od statusu „wysłanie wniosku do WFOŚ” i dalej", () => {
@@ -40,37 +81,26 @@ describe("prowizja handlowca", () => {
   });
 
   it("umowa „sam VAT” = −75%", () => {
-    const result = salesClientCommission(client({ agreements: [{ valueNet: 20_000, surchargeNet: 0, samVat: true }] }), sales(2), config);
+    const result = salesClientCommission(client({ agreements: [kociol(20_000, 0, true)] }), sales(2), config);
     expect(result.samVat).toBe(true);
     expect(result.base).toBe(875); // 3500 × 25%
   });
 
-  it("jeden klient z dwiema umowami (termo + kocioł) = jedna prowizja", () => {
-    const result = salesClientCommission(
-      client({
-        agreements: [
-          { valueNet: 80_000, surchargeNet: 2_000, samVat: false },
-          { valueNet: 30_000, surchargeNet: 1_000, samVat: true },
-        ],
-      }),
-      sales(1),
-      config,
-    );
-    expect(result.base).toBe(3000); // nie 2 × 3000; nie „sam VAT”, bo tylko jedna umowa jest sam VAT
-    expect(result.surchargeCapped).toBe(3000);
-    expect(result.surchargePart).toBe(900); // 30% z 3000
-    expect(result.total).toBe(3900);
+  it("Duet, w którym tylko jedna umowa jest „sam VAT” — bez obniżki (założenie nr 3, do decyzji)", () => {
+    const result = salesClientCommission(client({ agreements: [termo(), kociol(30_000, 0, true)] }), sales(1), config);
+    expect(result.samVat).toBe(false);
+    expect(result.base).toBe(5000);
   });
 
   it("nadmarża ograniczona do 10% wartości umowy netto × udział wg poziomu", () => {
-    const result = salesClientCommission(client({ agreements: [{ valueNet: 50_000, surchargeNet: 9_000, samVat: false }] }), sales(5), config);
+    const result = salesClientCommission(client({ agreements: [termo(50_000, 9_000)] }), sales(5), config);
     expect(result.surchargeCapped).toBe(5000); // limit 10% z 50 000
     expect(result.surchargePart).toBe(2500); // 50%
     expect(result.total).toBe(7500);
   });
 
   it("ujemna nadmarża nie obniża prowizji", () => {
-    const result = salesClientCommission(client({ agreements: [{ valueNet: 50_000, surchargeNet: -2_000, samVat: false }] }), sales(1), config);
+    const result = salesClientCommission(client({ agreements: [termo(50_000, -2_000)] }), sales(1), config);
     expect(result.surchargePart).toBe(0);
     expect(result.total).toBe(3000);
   });
@@ -126,7 +156,7 @@ describe("dyferencja managera i mnożnik KPI", () => {
   it("zmiana stawki w konfiguracji zmienia wynik (brak liczb na sztywno)", () => {
     const custom = { ...config, rules: { ...config.rules, samVatReduction: 0.5 } };
     const level = { ...sales(1), soloRate: 1000 };
-    const result = salesClientCommission(client({ agreements: [{ valueNet: 1, surchargeNet: 0, samVat: true }] }), level, custom);
+    const result = salesClientCommission(client({ agreements: [termo(1, 0, true)] }), level, custom);
     expect(result.base).toBe(500);
   });
 });

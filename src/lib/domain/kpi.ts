@@ -29,6 +29,8 @@ export interface KpiResult {
   band: KpiBand;
   multiplier: number;
   belowMinimum: boolean;
+  /** Wynik w przedziale z żółtą kartką (zapis w historii osoby). */
+  yellowCard: boolean;
 }
 
 export const MAX_KPI_LEVEL = 5;
@@ -72,7 +74,7 @@ export function computeKpi(
   const score = maxPoints === 0 ? 0 : roundMoney((points / maxPoints) * 100);
   const band = bandForScore(score, bands);
 
-  return { items, score, band, multiplier: band.multiplier, belowMinimum: band.belowMinimum };
+  return { items, score, band, multiplier: band.multiplier, belowMinimum: band.belowMinimum, yellowCard: band.yellowCard };
 }
 
 // ---------- Surowe wartości KPI handlowca liczone z historii statusów CRM ----------

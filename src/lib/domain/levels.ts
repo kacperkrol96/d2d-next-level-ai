@@ -26,25 +26,40 @@ function ratio(have: number, from: number, to: number): number {
   return Math.max(0, Math.min(1, (have - from) / (to - from)));
 }
 
+export interface SalesLevelInput {
+  ownClients: number;
+  /** Klienci podległych handlowców (cały zespół w dół struktury). */
+  structureClients: number;
+  /** Poziom zdobyty wcześniej — brak minimum do utrzymania, poziom nie spada. */
+  previousLevel?: number;
+}
+
 /**
  * Poziom handlowca: najwyższy, którego próg klientów jest osiągnięty.
- * Brak minimum do utrzymania — poziom nigdy nie spada poniżej `previousLevel`.
+ * Od poziomu `structureFromLevel` do progu liczą się klienci całego zespołu
+ * (jego + podległych). Poziom nigdy nie spada poniżej `previousLevel`.
  */
-export function salesLevelFor(clients: number, levels: readonly SalesLevel[], previousLevel = 1): LevelProgress<SalesLevel> {
+export function salesLevelFor(input: SalesLevelInput, levels: readonly SalesLevel[], structureFromLevel: number): LevelProgress<SalesLevel> {
   const sorted = byLevel(levels);
+  const clientsFor = (level: SalesLevel) =>
+    level.level >= structureFromLevel ? input.ownClients + input.structureClients : input.ownClients;
+
   let reached = sorted[0].level;
   for (const level of sorted) {
-    if (clients >= level.clientsToReach) reached = level.level;
+    if (clientsFor(level) >= level.clientsToReach) reached = level.level;
+    else break;
   }
-  const currentLevel = Math.max(reached, previousLevel);
+  const currentLevel = Math.max(reached, input.previousLevel ?? 1);
   const current = findLevel(sorted, currentLevel);
   const next = sorted.find((l) => l.level === currentLevel + 1) ?? null;
+  if (!next) return { current, next, clientsMissing: 0, peopleMissing: 0, progress: 1 };
+  const clients = clientsFor(next);
   return {
     current,
     next,
-    clientsMissing: next ? Math.max(0, next.clientsToReach - clients) : 0,
+    clientsMissing: Math.max(0, next.clientsToReach - clients),
     peopleMissing: 0,
-    progress: next ? ratio(clients, current.clientsToReach, next.clientsToReach) : 1,
+    progress: ratio(clients, current.clientsToReach, next.clientsToReach),
   };
 }
 

@@ -52,12 +52,12 @@ export const seedConfig: AppConfig = {
   },
 
   kpiBands: [
-    { minScore: 0, multiplier: 0.75, label: "Poniżej minimum", belowMinimum: true },
-    { minScore: 30, multiplier: 0.75, label: "75%", belowMinimum: false },
-    { minScore: 46, multiplier: 0.8, label: "80%", belowMinimum: false },
-    { minScore: 59, multiplier: 0.9, label: "90%", belowMinimum: false },
-    { minScore: 70, multiplier: 1.0, label: "100%", belowMinimum: false },
-    { minScore: 90, multiplier: 1.1, label: "110%", belowMinimum: false },
+    { minScore: 0, multiplier: 0.75, label: "Poniżej minimum", belowMinimum: true, yellowCard: true },
+    { minScore: 30, multiplier: 0.75, label: "75%", belowMinimum: false, yellowCard: false },
+    { minScore: 46, multiplier: 0.8, label: "80%", belowMinimum: false, yellowCard: false },
+    { minScore: 59, multiplier: 0.9, label: "90%", belowMinimum: false, yellowCard: false },
+    { minScore: 70, multiplier: 1.0, label: "100%", belowMinimum: false, yellowCard: false },
+    { minScore: 90, multiplier: 1.1, label: "110%", belowMinimum: false, yellowCard: false },
   ],
 
   fleetBands: [
@@ -76,6 +76,7 @@ export const seedConfig: AppConfig = {
     settlementAnchorDate: "2026-01-05",
     offerSignCapDays: 7,
     documentsDeadlineHours: 24,
+    salesStructureCountsFromLevel: 5,
   },
 
   pipelines: {
@@ -106,4 +107,9 @@ export const seedConfig: AppConfig = {
     { key: "ten_clients", label: "Dziesiątka", description: "10 klientów na koncie", metric: "clients", min: 10 },
     { key: "structure", label: "Lider", description: "Poziom 5 — własna struktura", metric: "level", min: 5 },
   ],
+
+  agreementCategories: {
+    thermo: ["Termomodernizacja"],
+    heatSource: ["Kocioł", "Pompa ciepła", "Źródło ciepła"],
+  },
 };

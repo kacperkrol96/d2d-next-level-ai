@@ -5,11 +5,13 @@ import { getCrm, currentStatus, enteredStatusAt, reachedStatusAt, resolveAssignm
 import type { CrmClient, CrmEmployee } from "@/lib/crm/types";
 import { mockActivity, mockCompanyTargetPct } from "@/lib/crm/mock-activity";
 import type { AppUser } from "@/lib/auth/users";
-import { auditorClientCommission, applyKpiMultiplier, salesClientCommission, type CommissionState } from "@/lib/domain/commission";
+import { auditorClientCommission, salesClientCommission, type CommissionState } from "@/lib/domain/commission";
 import { averageOfferSignDays, computeKpi, documentsOnTimeRate, fiveStarReviewRate, type KpiResult } from "@/lib/domain/kpi";
 import { auditorLevelFor, salesLevelFor } from "@/lib/domain/levels";
 import { fleetCost, type FleetResult } from "@/lib/domain/fleet";
-import { settlementPeriodFor } from "@/lib/domain/settlement";
+import { computeSettlement, fleetDeductionForPeriod, settlementPeriodFor, type MonthlyFleetCost, type Settlement } from "@/lib/domain/settlement";
+import { yellowCardFor, type YellowCard } from "@/lib/domain/yellow-card";
+import { saveYellowCard, yellowCardsOf } from "./history";
 import { formatPLN, roundMoney } from "@/lib/domain/money";
 
 export interface CommissionEntry {
@@ -53,6 +55,9 @@ export interface OrbitData {
   rates: RateRow[];
   kpi: KpiResult & { units: Record<string, string> };
   payout: { commission: number; multiplier: number; payout: number };
+  /** Rozliczenie bieżącego okresu z pozycjami (m.in. „Flota”). */
+  settlement: Settlement & { fleetMonths: string[] };
+  yellowCards: YellowCard[];
   fleet: FleetResult | null;
   path: { level: number; title: string; requirement: string; reached: boolean; current: boolean }[];
   badges: { key: string; label: string; description: string; earned: boolean }[];
@@ -85,9 +90,9 @@ function summarize(entries: CommissionEntry[], config: AppConfig, now: Date): Ea
 function salesEntries(clients: CrmClient[], level: SalesLevel, config: AppConfig): CommissionEntry[] {
   return clients.map((client) => {
     const status = currentStatus(client.salesStatusHistory) ?? "—";
-    const c = salesClientCommission({ status, mode: client.mode, agreements: client.agreements }, level, config);
+    const c = salesClientCommission({ status, agreements: client.agreements }, level, config);
     const greenAt = c.state === "green" ? reachedStatusAt(client.salesStatusHistory, config.rules.salesGreenFromStatus, config.pipelines.sales) : null;
-    const parts = [`${client.mode === "solo" ? "Solo" : "Duet"} ${formatPLN(c.base)}`];
+    const parts = [`${c.scope === "solo" ? "Solo" : "Duet"} ${formatPLN(c.base)}`];
     if (c.samVat) parts.push("sam VAT");
     if (c.surchargePart > 0) parts.push(`nadmarża ${formatPLN(c.surchargePart)}`);
     return {
@@ -162,6 +167,36 @@ function badges(config: AppConfig, data: { clients: number; kpiMultiplier: numbe
   return config.badges.map((b) => ({ key: b.key, label: b.label, description: b.description, earned: data[b.metric] >= b.min }));
 }
 
+/** Wszyscy podlegli (rekurencyjnie) danej osobie z wybraną rolą. */
+function subordinatesOf(managerId: string, employees: CrmEmployee[], role: CrmEmployee["role"]): CrmEmployee[] {
+  const direct = employees.filter((e) => e.managerId === managerId);
+  return direct.flatMap((e) => [...(e.role === role ? [e] : []), ...subordinatesOf(e.id, employees, role)]);
+}
+
+const monthKey = (iso: string) => iso.slice(0, 7);
+
+/** Koszty floty za miesiące, w których handlowiec miał zielonych klientów (i bieżący oraz poprzedni). */
+function monthlyFleetCosts(entries: CommissionEntry[], config: AppConfig, now: Date): MonthlyFleetCost[] {
+  const counts = new Map<string, number>();
+  const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  counts.set(monthKey(prev.toISOString()), 0);
+  counts.set(monthKey(now.toISOString()), 0);
+  for (const e of entries) if (e.state === "green" && e.greenAt) counts.set(monthKey(e.greenAt), (counts.get(monthKey(e.greenAt)) ?? 0) + 1);
+  return [...counts].map(([month, clients]) => ({ month, cost: fleetCost(clients, config.fleetBands).cost }));
+}
+
+function settlementFor(earnings: Earnings, kpi: KpiResult, fleetCosts: MonthlyFleetCost[], config: AppConfig, now: Date) {
+  const period = periodOf(config, now);
+  const fleet = fleetDeductionForPeriod(period, fleetCosts);
+  const settlement = computeSettlement({ commissions: earnings.periodGreenTotal, kpiMultiplier: kpi.multiplier, fleetCost: fleet.total });
+  return { ...settlement, fleetMonths: fleet.months };
+}
+
+function yellowCards(personId: string, kpi: KpiResult, config: AppConfig, now: Date): YellowCard[] {
+  saveYellowCard(yellowCardFor(personId, kpi, periodOf(config, now).start, now));
+  return yellowCardsOf(personId);
+}
+
 async function loadCrm() {
   const crm = getCrm();
   const [employees, clients] = await Promise.all([crm.listEmployees(), crm.listClients()]);
@@ -184,11 +219,19 @@ export async function getOrbitData(user: AppUser, now = new Date()): Promise<Orb
   if (user.track === "sales") {
     const own = clients.filter((c) => c.salesId === employee.id).map((c) => c.client);
     const probeLevel = config.salesLevels[0];
-    const greenCount = salesEntries(own, probeLevel, config).filter((e) => e.state === "green").length;
-    const lp = salesLevelFor(greenCount, config.salesLevels, user.highestLevel);
+    const greenOf = (list: CrmClient[]) => salesEntries(list, probeLevel, config).filter((e) => e.state === "green").length;
+    const greenCount = greenOf(own);
+    const team = subordinatesOf(employee.id, employees, "sales");
+    const structureClients = greenOf(clients.filter((c) => c.salesId && team.some((t) => t.id === c.salesId)).map((c) => c.client));
+    const lp = salesLevelFor(
+      { ownClients: greenCount, structureClients, previousLevel: user.highestLevel },
+      config.salesLevels,
+      config.rules.salesStructureCountsFromLevel,
+    );
     const entries = salesEntries(own, lp.current, config);
     const earnings = summarize(entries, config, now);
     const kpi = computeKpi(config.kpi.sales, salesKpiValues(own, employee, employees, allClients, config, now), config.kpiBands);
+    const settlement = settlementFor(earnings, kpi, user.hasCompanyCar ? monthlyFleetCosts(entries, config, now) : [], config, now);
 
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthClients = entries.filter((e) => e.state === "green" && e.greenAt && new Date(e.greenAt) >= monthStart).length;
@@ -199,22 +242,27 @@ export async function getOrbitData(user: AppUser, now = new Date()): Promise<Orb
       title: lp.current.title,
       nextLevel: lp.next?.level ?? null,
       nextTitle: lp.next?.title ?? null,
-      clientsCount: greenCount,
+      clientsCount: lp.current.level + 1 >= config.rules.salesStructureCountsFromLevel ? greenCount + structureClients : greenCount,
       clientsMissing: lp.clientsMissing,
       peopleMissing: 0,
       progress: lp.progress,
       rates: [
-        { label: "Klient solo", current: formatPLN(lp.current.soloRate), next: lp.next ? formatPLN(lp.next.soloRate) : null },
-        { label: "Klient w duecie", current: formatPLN(lp.current.duoRate), next: lp.next ? formatPLN(lp.next.duoRate) : null },
+        { label: "Solo (1 umowa)", current: formatPLN(lp.current.soloRate), next: lp.next ? formatPLN(lp.next.soloRate) : null },
+        { label: "Duet (termo + źródło ciepła)", current: formatPLN(lp.current.duoRate), next: lp.next ? formatPLN(lp.next.duoRate) : null },
         { label: "Udział w nadmarży", current: pct(lp.current.surchargeShare), next: lp.next ? pct(lp.next.surchargeShare) : null },
       ],
       kpi: { ...kpi, units: Object.fromEntries(config.kpi.sales.map((k) => [k.key, k.unit])) },
-      payout: { commission: earnings.periodGreenTotal, multiplier: kpi.multiplier, payout: applyKpiMultiplier(earnings.periodGreenTotal, kpi.multiplier) },
+      payout: { commission: earnings.periodGreenTotal, multiplier: kpi.multiplier, payout: settlement.payable },
+      settlement,
+      yellowCards: yellowCards(employee.id, kpi, config, now),
       fleet: user.hasCompanyCar ? fleetCost(monthClients, config.fleetBands) : null,
       path: config.salesLevels.map((l) => ({
         level: l.level,
         title: l.title,
-        requirement: l.clientsToReach === 0 ? "Start" : `${l.clientsToReach} klientów`,
+        requirement:
+          l.clientsToReach === 0
+            ? "Start"
+            : `${l.clientsToReach} klientów${l.level >= config.rules.salesStructureCountsFromLevel ? " zespołu" : ""}`,
         reached: l.level <= lp.current.level,
         current: l.level === lp.current.level,
       })),
@@ -233,6 +281,7 @@ export async function getOrbitData(user: AppUser, now = new Date()): Promise<Orb
   const entries = auditorEntries(own, lp.current, config);
   const earnings = summarize(entries, config, now);
   const kpi = auditorKpi(employee, allClients, config);
+  const settlement = settlementFor(earnings, kpi, [], config, now);
   const next = lp.next;
 
   return {
@@ -252,7 +301,9 @@ export async function getOrbitData(user: AppUser, now = new Date()): Promise<Orb
       { label: "Bonus za zamknięcie", current: formatPLN(lp.current.closingBonus), next: next ? formatPLN(next.closingBonus) : null },
     ],
     kpi: { ...kpi, units: Object.fromEntries(config.kpi.auditor.map((k) => [k.key, k.unit])) },
-    payout: { commission: earnings.periodGreenTotal, multiplier: kpi.multiplier, payout: applyKpiMultiplier(earnings.periodGreenTotal, kpi.multiplier) },
+    payout: { commission: earnings.periodGreenTotal, multiplier: kpi.multiplier, payout: settlement.payable },
+    settlement,
+    yellowCards: yellowCards(employee.id, kpi, config, now),
     fleet: null,
     path: config.auditorLevels.map((l) => ({
       level: l.level,

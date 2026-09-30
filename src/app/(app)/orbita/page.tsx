@@ -168,6 +168,7 @@ export default async function OrbitaPage() {
                   <div key={i} className={`h-2 rounded-full ${i < data.fleet!.clients ? "bg-earned" : "bg-white/[0.06]"}`} />
                 ))}
               </div>
+              <p className="mt-3 text-xs text-muted">Koszt potrącany automatycznie w najbliższym rozliczeniu (pozycja „Flota” w Skarbcu).</p>
               {data.fleet.nextBandCost !== null && (
                 <p className="mt-3 text-xs text-muted">
                   Jeszcze {data.fleet.clientsToNextBand} → koszt spada do {formatPLN(data.fleet.nextBandCost)}

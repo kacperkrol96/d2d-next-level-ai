@@ -42,7 +42,7 @@ export function KpiPanel({ items, units, score, multiplier, bandLabel, belowMini
             <span className="ml-1 text-lg text-muted">/ 100 pkt</span>
           </div>
           <div className={`mt-1 text-sm ${belowMinimum ? "text-danger" : "text-muted"}`}>
-            {belowMinimum ? "Poniżej minimum — manager dostał alert" : `Przedział ${bandLabel}`}
+            {belowMinimum ? "Poniżej minimum — alert do managera i żółta kartka" : `Przedział ${bandLabel}`}
           </div>
         </div>
         <div className="text-right">

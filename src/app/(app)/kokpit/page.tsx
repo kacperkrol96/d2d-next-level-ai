@@ -17,7 +17,7 @@ export default async function KokpitPage() {
   const offers = orbit?.earnings.entries.filter((e) => e.status === config.pipelines.milestones.offerHandedOver) ?? [];
 
   const alerts: string[] = [];
-  if (orbit?.kpi.belowMinimum) alerts.push("Wynik KPI poniżej minimum — manager dostał alert.");
+  if (orbit?.kpi.belowMinimum) alerts.push("Wynik KPI poniżej minimum — mnożnik 75%, manager dostał alert, żółta kartka zapisana w historii.");
   const weakKpi = orbit?.kpi.items.filter((k) => k.value !== null && k.level <= 1) ?? [];
   for (const k of weakKpi) alerts.push(`KPI „${k.label}” na poziomie ${k.level === 0 ? "poniżej I" : "I"} — zobacz Orbitę.`);
 

@@ -1,6 +1,20 @@
 # Plan etapów — wersja 1.0
 
-Każdy etap kończy się: działającą wersją do obejrzenia na iPadzie/telefonie, zielonymi testami i krótkim opisem „co sprawdzić”.
+## Jak wydajemy etapy
+
+1. Każdy etap na osobnej gałęzi → Pull Request (GitHub Actions uruchamia lint, typy, testy i build).
+2. Kacper ogląda etap na linku podglądowym Vercel (preview) na iPadzie.
+3. Scalenie do `main` (produkcja) TYLKO po akceptacji Kacpra.
+4. Po etapie Kacper dostaje: link do PR, link do podglądu, listę rzeczy do przetestowania.
+
+## ⚠️ Przed startem z prawdziwymi danymi
+
+- [ ] Supabase: przejście z planu darmowego na **Pro**
+- [ ] Supabase: włączone **kopie zapasowe** (Point-in-Time Recovery) i test odtworzenia
+- [ ] Vercel Pro: domena `app.nextlevelenergy.pl`, zmienne środowiskowe produkcji
+- [ ] Klucz RRUP tylko w ustawieniach Vercel
+
+Plan: Supabase darmowy na czas budowy (dane testowe), Vercel Pro (projekt firmowy).
 
 ## Etap 0 — specyfikacja i szkielet ✅
 
@@ -14,6 +28,8 @@ Każdy etap kończy się: działającą wersją do obejrzenia na iPadzie/telefon
 - [x] Orbita na danych testowych, komponent `Avatar(level, size)` (10 poziomów SVG), galeria `/orbita/awatary`
 - [x] Animacja licznika prowizji („liczarka banknotów” + odlot do Skarbca, dźwięk z wyciszeniem)
 - [x] Kokpit (Rozpocznij dzień + GPS), Skarbiec (lista prowizji), pozostałe panele jako zapowiedzi
+- [x] Poprawki po przeglądzie: Solo/Duet z rodzajów umów, awanse handlowców ze strukturą od poz. 5 (edytowalne), KPI 0–29 = 75% + alert + żółta kartka, flota jako pozycja „Flota” w rozliczeniu (Skarbiec, podgląd w Mennicy), CI na Pull Requestach
+- [ ] Odpowiedzi Kacpra na otwarte założenia (SPEC.md → „Założenia i decyzje”) — **warunek startu Etapu 1**
 
 ## Etap 1 — logowanie, role, Orbita, Skarbiec, KPI
 
@@ -21,7 +37,7 @@ Każdy etap kończy się: działającą wersją do obejrzenia na iPadzie/telefon
 - Logowanie Google Workspace (tylko domena firmy), profile użytkowników, role, struktura (kto komu podlega)
 - Zabezpieczenie danych w bazie (Row Level Security: każdy widzi siebie i swoją strukturę)
 - Panel admina: edycja stawek/progów/wag, umowa ze spółką (rodzaj, data końca, wariant), auto firmowe, target spółki, kwoty za opiekę nad zespołem
-- Orbita i Skarbiec na danych z bazy; zapis „najwyższego poziomu” (poziom nie spada)
+- Orbita i Skarbiec na danych z bazy; zapis „najwyższego poziomu” (poziom nie spada); historia osoby (żółte kartki) w bazie
 - Ceremonia awansu (pełny ekran), efekt „przelewu” szara → zielona
 - Przycisk „zgłoś błąd przypisania klienta”
 - Domena `app.nextlevelenergy.pl` na Vercel, przycisk „Zaloguj” na stronie www

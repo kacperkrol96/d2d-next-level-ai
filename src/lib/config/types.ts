@@ -60,6 +60,8 @@ export interface KpiBand {
   label: string;
   /** Wynik poniżej minimum — alert do managera. */
   belowMinimum: boolean;
+  /** Wynik w tym przedziale zapisuje żółtą kartkę w historii osoby. */
+  yellowCard: boolean;
 }
 
 export interface FleetBand {
@@ -89,6 +91,20 @@ export interface CommissionRules {
   offerSignCapDays: number;
   /** Limit godzin na komplet dokumentów od podpisania umowy. */
   documentsDeadlineHours: number;
+  /**
+   * Od tego poziomu handlowca do progów awansu wliczają się klienci
+   * całego zespołu (jego + podległych). Edytowalne przez admina.
+   */
+  salesStructureCountsFromLevel: number;
+}
+
+/**
+ * Rodzaje umów z CRM przypisane do kategorii. Solo = klient ma umowę
+ * tylko z jednej kategorii; Duet = termomodernizacja + źródło ciepła.
+ */
+export interface AgreementCategories {
+  thermo: string[];
+  heatSource: string[];
 }
 
 export interface Pipelines {
@@ -127,4 +143,5 @@ export interface AppConfig {
   rules: CommissionRules;
   pipelines: Pipelines;
   badges: BadgeDefinition[];
+  agreementCategories: AgreementCategories;
 }

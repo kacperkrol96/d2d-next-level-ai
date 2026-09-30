@@ -18,7 +18,9 @@ Kacper (Next Level Energy) NIE jest programistą. Piszemy do niego prosto, po po
 6. **RODO:** nigdy nie pobieramy ani nie zapisujemy PESEL, numerów ksiąg wieczystych, numerów działek ani innych zbędnych danych z CRM.
 7. **CRM tylko przez `getCrm()`** (`src/lib/crm`) — dane testowe, dopóki nie ma klucza RRUP.
 8. **Konfigurator:** nie kopiujemy logiki z `kacperkrol96/kalkulator-nle` — używamy jej z tamtego repo.
-9. Nazwy paneli są obowiązkowe: Kokpit, Orbita, Skarbiec, Radar, Misje, Terytorium, Akademia, Konfigurator, Wieża, Mennica.
+9. **Wydawanie:** każdy etap na osobnej gałęzi → Pull Request. Scalenie do `main` TYLKO po akceptacji Kacpra (ogląda podgląd Vercel na iPadzie). Po etapie podaj: link do PR, link do podglądu, listę do przetestowania.
+10. **Przed prawdziwymi danymi** przypomnij Kacprowi: Supabase Pro + kopie zapasowe (lista w `docs/PLAN.md`).
+11. Nazwy paneli są obowiązkowe: Kokpit, Orbita, Skarbiec, Radar, Misje, Terytorium, Akademia, Konfigurator, Wieża, Mennica.
 
 ## Wygląd i ruch
 

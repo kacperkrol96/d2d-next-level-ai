@@ -1,4 +1,4 @@
-import type { AppConfig, AuditorLevel, IncomeTier, SalesLevel } from "@/lib/config/types";
+import type { AgreementCategories, AppConfig, AuditorLevel, IncomeTier, SalesLevel } from "@/lib/config/types";
 import { roundMoney } from "./money";
 import { isCancelled, isStatusAtOrBeyond } from "./status";
 
@@ -8,6 +8,8 @@ export type CommissionState = "grey" | "green" | "cancelled";
 // ---------------------------------- HANDLOWIEC ----------------------------------
 
 export interface SalesAgreementInput {
+  /** Rodzaj umowy z CRM (np. „Termomodernizacja”, „Kocioł”). */
+  kind: string;
   /** Wartość umowy netto. */
   valueNet: number;
   /** Nadmarża netto na umowie. */
@@ -19,13 +21,27 @@ export interface SalesAgreementInput {
 export interface SalesClientInput {
   /** Aktualny status sprzedażowy klienta w CRM. */
   status: string;
-  mode: "solo" | "duo";
-  /** Wszystkie umowy klienta (termo + kocioł = nadal JEDNA prowizja). */
+  /** Wszystkie umowy klienta — zawsze JEDNA prowizja za klienta. */
   agreements: SalesAgreementInput[];
+}
+
+/**
+ * Zakres umów u JEDNEGO klienta:
+ * - Solo = umowa tylko z jednej kategorii (samo termo ALBO samo źródło ciepła),
+ * - Duet = termomodernizacja + źródło ciepła („prace po korek”).
+ * Rodzaje umów spoza obu kategorii nie wpływają na zakres.
+ */
+export type SalesScope = "solo" | "duo";
+
+export function salesScope(agreements: readonly { kind: string }[], categories: AgreementCategories): SalesScope {
+  const hasThermo = agreements.some((a) => categories.thermo.includes(a.kind));
+  const hasHeatSource = agreements.some((a) => categories.heatSource.includes(a.kind));
+  return hasThermo && hasHeatSource ? "duo" : "solo";
 }
 
 export interface SalesCommission {
   state: CommissionState;
+  scope: SalesScope;
   baseRate: number;
   /** Część podstawowa po ewentualnej obniżce „sam VAT”. */
   base: number;
@@ -38,14 +54,15 @@ export interface SalesCommission {
 }
 
 /**
- * Prowizja handlowca ZA KLIENTA.
- * - stawka solo/duet wg poziomu,
+ * Prowizja handlowca ZA KLIENTA — w całości dla handlowca przypisanego do klienta.
+ * - stawka Solo/Duet wg poziomu; Solo/Duet rozpoznawane po rodzajach umów klienta,
  * - „sam VAT” (wszystkie umowy klienta) = obniżka wg konfiguracji,
  * - nadmarża netto z limitem % wartości umów netto × udział wg poziomu.
  */
 export function salesClientCommission(input: SalesClientInput, level: SalesLevel, config: AppConfig): SalesCommission {
   const { rules, pipelines } = config;
-  const baseRate = input.mode === "solo" ? level.soloRate : level.duoRate;
+  const scope = salesScope(input.agreements, config.agreementCategories);
+  const baseRate = scope === "solo" ? level.soloRate : level.duoRate;
   const samVat = input.agreements.length > 0 && input.agreements.every((a) => a.samVat);
   const base = roundMoney(samVat ? baseRate * (1 - rules.samVatReduction) : baseRate);
 
@@ -58,7 +75,7 @@ export function salesClientCommission(input: SalesClientInput, level: SalesLevel
   if (isCancelled(input.status, pipelines.cancelled)) state = "cancelled";
   else if (isStatusAtOrBeyond(input.status, rules.salesGreenFromStatus, pipelines.sales)) state = "green";
 
-  return { state, baseRate, base, surchargeCapped, surchargePart, total: roundMoney(base + surchargePart), samVat };
+  return { state, scope, baseRate, base, surchargeCapped, surchargePart, total: roundMoney(base + surchargePart), samVat };
 }
 
 // ---------------------------------- AUDYTOR ----------------------------------

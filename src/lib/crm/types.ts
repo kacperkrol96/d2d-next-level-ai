@@ -29,7 +29,8 @@ export interface CrmEmployee {
 
 export interface CrmAgreement {
   id: string;
-  kind: "termomodernizacja" | "kocioł" | "fotowoltaika" | "inne";
+  /** Rodzaj umowy jak w CRM (np. „Termomodernizacja”, „Kocioł”) — Solo/Duet liczymy z tego pola. */
+  kind: string;
   valueNet: number;
   surchargeNet: number;
   samVat: boolean;
@@ -42,7 +43,6 @@ export interface CrmClient {
   displayName: string;
   city: string;
   incomeTier: IncomeTier;
-  mode: "solo" | "duo";
   salesStatusHistory: CrmStatusChange[];
   auditStatusHistory: CrmStatusChange[];
   /**
