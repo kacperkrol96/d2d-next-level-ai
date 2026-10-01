@@ -3,6 +3,8 @@ import { demoUsers } from "@/lib/auth/users";
 import { seedConfig } from "@/lib/config/seed";
 import { MockCrm } from "@/lib/crm";
 import { buildMockData } from "@/lib/crm/mock-data";
+import { academyStages } from "@/lib/academy/content";
+import type { AcademyProgress, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
 import { recordYellowCard, type YellowCard } from "@/lib/domain/yellow-card";
 import type { AppClientData, DataSource, KpiInputs, SalesAttribution } from "./types";
 
@@ -19,6 +21,7 @@ export class MockDataSource implements DataSource {
   private readonly crmProvider = new MockCrm();
   private yellowCards: YellowCard[] = [];
   private adminAttributions: SalesAttribution[] = [];
+  private academy = new Map<string, AcademyProgress>(seedAcademy());
 
   async getConfig() {
     return seedConfig;
@@ -57,7 +60,37 @@ export class MockDataSource implements DataSource {
     this.adminAttributions.push({ clientId, employeeId, source: "admin", at: new Date().toISOString(), note: `potwierdził ${adminId}` });
   }
 
+  async academyStages(track: AcademyTrack) {
+    return academyStages.filter((s) => s.track === track);
+  }
+
+  async academyProgress(userId: string): Promise<AcademyProgress> {
+    return this.academy.get(userId) ?? { userId, lessonsDone: [], attempts: [] };
+  }
+
+  async markLessonDone(userId: string, lessonId: string) {
+    const p = await this.academyProgress(userId);
+    if (!p.lessonsDone.includes(lessonId)) this.academy.set(userId, { ...p, lessonsDone: [...p.lessonsDone, lessonId] });
+  }
+
+  async saveExamAttempt(userId: string, attempt: ExamAttempt) {
+    const p = await this.academyProgress(userId);
+    this.academy.set(userId, { ...p, attempts: [...p.attempts, attempt] });
+  }
+
   async yellowCardsOf(personId: string) {
     return this.yellowCards.filter((c) => c.personId === personId);
   }
+}
+
+/** Postęp testowy: Marek ma za sobą dwa etapy, Ola jeden. */
+function seedAcademy(): [string, AcademyProgress][] {
+  const day = 24 * 60 * 60 * 1000;
+  const ago = (d: number) => new Date(Date.now() - d * day).toISOString();
+  const passed = (stageId: string, score: number, d: number): ExamAttempt => ({ stageId, score, passed: true, at: ago(d), answers: {} });
+  return [
+    ["u-marek", { userId: "u-marek", lessonsDone: ["s1-l1", "s1-l2", "s1-l3", "s2-l1", "s2-l2", "s3-l1"], attempts: [passed("s1", 1, 20), { stageId: "s2", score: 0.67, passed: false, at: ago(12), answers: {} }, passed("s2", 1, 11)] }],
+    ["u-anna", { userId: "u-anna", lessonsDone: ["s1-l1", "s1-l2", "s1-l3", "s2-l1", "s2-l2", "s3-l1", "s3-l2", "s4-l1"], attempts: [passed("s1", 1, 60), passed("s2", 1, 55), passed("s3", 1, 50), passed("s4", 1, 45)] }],
+    ["u-ola", { userId: "u-ola", lessonsDone: ["a1-l1", "a1-l2", "a2-l1"], attempts: [passed("a1", 1, 15)] }],
+  ];
 }

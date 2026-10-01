@@ -33,7 +33,7 @@ Audytor, Handlowiec (widzi też swój zespół audytorów), Manager, Zarząd/Adm
 - **Radar** — oferty od audytorów z licznikiem 3 dni.
 - **Misje** — kalendarz, zadania, spotkania (tworzone przy wpisywaniu klienta, umawiane tylko w aplikacji), linki do klienta w CRM; synchronizacja z Kalendarzem Google; lead głosem; nagrywanie spotkania domykającego (sekcje niżej).
 - **Terytorium** — mapa rejonu od managera, każdy dom jako punkt (dane adresowe/budynki z państwowych danych Geoportalu), statusy: otworzył / nie otworzył / nie zainteresowany / umówione / wrócić. GPS POTWIERDZA obecność przy domu (np. 30 m), nie wykrywa sam. Procent „wyczyszczenia” rejonu. Czas pracy = czas otwartej aplikacji, liczony w aktywnych blokach (sekcja „Raportowanie w terenie”). GPS tylko w godzinach pracy. Odhaczenie domu w 2 sekundy, tryb offline.
-- **Akademia** — onboarding: osobne ścieżki audytora i handlowca (skrypt, bank obiekcji, filmy, quizy), egzaminy sprawdzane automatycznie, etapy odblokowują się po zdaniu.
+- **Akademia** — onboarding: osobne ścieżki audytora i handlowca (skrypt, bank obiekcji, filmy, quizy), egzaminy sprawdzane automatycznie, etapy odblokowują się po zdaniu (szczegóły niżej).
 - **Konfigurator** — kalkulator ofertowy z repo `kacperkrol96/kalkulator-nle`. NIE kopiujemy logiki obliczeń — używamy jej z tamtego repo.
 - **Wieża** — panel managera: zespół, rejony (rysowanie na mapie), postępy w Akademii, alerty z Radaru, zatwierdzanie opinii 5★, alerty „puste przejścia”, wyjątki od reguły „Nie ma w aplikacji = nie ma klienta”, odsłuch nagrań rozmów.
 - **Konstelacja** — osobny panel managera (razem z Wieżą): struktura jako gwiazdozbiór i eskadry (niżej).
@@ -55,6 +55,16 @@ To NIE jest prognoza zarobków.
 - Kliknięcie w osobę: jej klienci, KPI, ile manager zarobił dzięki niej.
 - **Eskadra** = zewnętrzna grupa sprzedażowa (np. grupa Łukasza Burligi, umowy z prefiksem ŁB), NIE handlowiec z audytorami. Eskadra ma własnego lidera i własny pakiet zasad rozliczeń, włączana/wyłączana jednym przełącznikiem w panelu admina; historia zostaje po wyłączeniu.
 - Styl: minimalistyczny, ale ma nakręcać do zarabiania ze skali.
+
+## Akademia
+
+- **Ścieżki**: audytor → ścieżka audytora; handlowiec i manager → ścieżka handlowca; zarząd podgląda obie.
+- **Etap** = lekcje (skrypt, bank obiekcji z kartami „dotknij, by zobaczyć odpowiedź”, film, quiz ćwiczeniowy) + egzamin.
+- **Egzamin** sprawdzany automatycznie na serwerze (poprawne odpowiedzi nie trafiają do przeglądarki): jedno pytanie na ekran, pytania jedno- i wielokrotnego wyboru (zaliczone tylko przy dokładnie poprawnym zestawie), wynik, wyjaśnienia błędów.
+- **Odblokowywanie**: etap N+1 otwiera się po zdaniu egzaminu etapu N (animacja otwieranego zamka). Egzamin dostępny po ukończeniu lekcji etapu.
+- **Ustawienia admina**: próg zaliczenia (domyślnie 80%), przerwa po niezdanym egzaminie (domyślnie 30 min), wymóg ukończenia lekcji przed egzaminem.
+- **Treści jako dane** (docelowo edytowane w panelu admina / Supabase). W repozytorium są PRZYKŁADOWE treści do podmiany przez NLE; filmy — miejsce na link.
+- Postęp w Akademii zobaczy manager w Wieży (Etap 3). Statystyki powodów z Radaru zasilą Akademię po Etapie 5.
 
 ## Raportowanie w terenie (Terytorium + Misje)
 

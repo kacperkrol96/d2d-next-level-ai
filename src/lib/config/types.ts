@@ -195,6 +195,16 @@ export interface AppLeadRule {
   enforceFrom: string | null;
 }
 
+/** Zasady Akademii (edytowalne przez admina). */
+export interface AcademyRules {
+  /** Próg zaliczenia egzaminu (0–1), np. 0.8 = 80% poprawnych odpowiedzi. */
+  passThreshold: number;
+  /** Ile minut odczekać przed kolejnym podejściem po niezdanym egzaminie (0 = od razu). */
+  retryCooldownMinutes: number;
+  /** Egzamin dostępny dopiero po ukończeniu wszystkich lekcji etapu. */
+  requireLessonsBeforeExam: boolean;
+}
+
 export interface AppConfig {
   salesLevels: SalesLevel[];
   auditorLevels: AuditorLevel[];
@@ -208,6 +218,7 @@ export interface AppConfig {
   badges: BadgeDefinition[];
   kpiWeightRules: KpiWeightRules;
   appLeadRule: AppLeadRule;
+  academy: AcademyRules;
   samVat: SamVatRule;
   /** Strefa czasowa firmy — daty okresów liczymy w czasie polskim. */
   timeZone: string;

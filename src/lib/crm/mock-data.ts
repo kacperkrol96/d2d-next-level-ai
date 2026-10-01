@@ -182,7 +182,13 @@ export interface MockCrmData extends AppClientData {
   agreements: CrmAgreement[];
 }
 
-export function buildMockData(now: Date = new Date()): MockCrmData {
+/**
+ * Stała chwila odniesienia dla danych testowych (start serwera) — dzięki temu daty
+ * statusów nie „przesuwają się” przy każdym odczycie i powiadomienia nie wracają.
+ */
+export const MOCK_EPOCH = new Date();
+
+export function buildMockData(now: Date = MOCK_EPOCH): MockCrmData {
   const nowMs = now.getTime();
   const clients: CrmClient[] = [];
   const agreements: CrmAgreement[] = [];

@@ -1,3 +1,4 @@
+import type { AcademyProgress, AcademyStage, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
 import type { AppUser } from "@/lib/auth/users";
 import type { AppConfig, IncomeTier } from "@/lib/config/types";
 import type { CrmProvider } from "@/lib/crm/types";
@@ -73,5 +74,10 @@ export interface DataSource {
   appClientData(): Promise<AppClientData>;
   /** Admin potwierdza handlowca (np. podpowiedź z inicjałów) jednym kliknięciem. */
   confirmSalesPerson(clientId: string, employeeId: string, adminId: string): Promise<void>;
+  /** Akademia: etapy ścieżki (treści), postęp osoby, zapis lekcji i podejść do egzaminu. */
+  academyStages(track: AcademyTrack): Promise<AcademyStage[]>;
+  academyProgress(userId: string): Promise<AcademyProgress>;
+  markLessonDone(userId: string, lessonId: string): Promise<void>;
+  saveExamAttempt(userId: string, attempt: ExamAttempt): Promise<void>;
   yellowCardsOf(personId: string): Promise<YellowCard[]>;
 }
