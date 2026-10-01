@@ -49,11 +49,15 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - [x] Warstwa danych `DataSource` (dane testowe; Supabase w etapie Dostępy)
 - [x] Poprawki po przeglądzie: „Dopłata do Duetu”; handlowiec ze źródeł aplikacja → CRM → historia (inicjały tylko podpowiedzią + „Potwierdź” w Mennicy); DZIAŁ PRAWNY = negatywny; próg i nadmarża jako ręczne pola przy kliencie; KPI „Raportowanie” dla obu ról, nowe wagi handlowca + walidacja wag; reguła „Nie ma w aplikacji…” z datą włączenia i ostrzeżeniami
 
-## Etap 2 — Akademia
+## Etap 2 — Akademia ✅
 
-- Ścieżki audytora i handlowca: skrypt, bank obiekcji, filmy, quizy (treści jako dane — przykładowe do podmiany)
-- Egzaminy sprawdzane automatycznie, etapy odblokowują się po zdaniu (animacja odblokowania)
-- Statystyki powodów z Radaru → Akademia (gdy będzie Radar)
+- [x] Ścieżki audytora i handlowca: skrypt, bank obiekcji (karty do odwracania), filmy (miejsce na link), quizy ćwiczeniowe — treści jako dane, przykładowe do podmiany
+- [x] Egzaminy sprawdzane automatycznie na serwerze, jedno pytanie na ekran, wielokrotny wybór, wyjaśnienia błędów
+- [x] Odblokowywanie etapów po zdaniu + animacja otwieranego zamka; „Następny krok” i postęp ścieżki
+- [x] Ustawienia: próg zaliczenia, przerwa po niezdanym egzaminie, wymóg lekcji przed egzaminem (+ testy)
+- [x] Postęp w źródle danych (`DataSource`) — gotowy pod Supabase i pod Wieżę
+- [ ] Prawdziwe treści od NLE (skrypty, obiekcje, filmy, pytania) — do wgrania; edycja treści w panelu admina (Etap 4)
+- [ ] Statystyki powodów z Radaru → Akademia (po Etapie 5)
 
 ## Etap 3 — Wieża + Konstelacja (z eskadrami)
 

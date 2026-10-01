@@ -202,4 +202,6 @@ export const seedConfig: AppConfig = {
 
   // Data włączenia reguły ustawi admin (2 tygodnie po starcie pilota).
   appLeadRule: { enforceFrom: null },
+
+  academy: { passThreshold: 0.8, retryCooldownMinutes: 30, requireLessonsBeforeExam: true },
 };
