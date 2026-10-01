@@ -17,6 +17,8 @@
 
 Plan: Supabase darmowy na czas budowy (dane testowe), Vercel Pro (projekt firmowy).
 
+Stan: Vercel podłączony (Hobby, dane testowe, bez Supabase) — podgląd budowany dla każdej gałęzi z Pull Requestem.
+
 ## Etap 0 — specyfikacja i szkielet ✅
 
 - [x] `docs/SPEC.md`, `docs/PLAN.md`, `CLAUDE.md`
