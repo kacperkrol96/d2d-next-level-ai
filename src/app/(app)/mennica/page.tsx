@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock } from "lucide-react";
+import { AlertTriangle, CalendarClock, History } from "lucide-react";
 import { SettlementLines } from "@/components/settlement/SettlementLines";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
@@ -56,7 +56,15 @@ export default async function MennicaPage() {
   const current = settlementPeriodFor(now, config.settlementPeriods, config.timeZone);
   const closing = previousPeriod(current, config.settlementPeriods, config.timeZone);
   const issues = allIssues(ctx);
-  const people = (await getDataSource().listUsers()).filter((u) => u.track);
+  const source = getDataSource();
+  const users = await source.listUsers();
+  const people = users.filter((u) => u.track);
+  const decisions = await source.salesDecisions();
+  const personName = (employeeId: string | null) =>
+    employeeId === null ? "nierozpoznany" : (ctx.employees.find((e) => e.id === employeeId)?.name ?? employeeId);
+  const userName = (id: string) => users.find((u) => u.id === id)?.name ?? id;
+  const clientName = (id: string) => ctx.clients.find((rc) => rc.client.id === id)?.client.displayName ?? id;
+  const stamp = new Intl.DateTimeFormat("pl-PL", { dateStyle: "short", timeStyle: "short", timeZone: config.timeZone });
   const previews = await Promise.all(people.map(async (u) => ({ user: u, orbit: await getOrbitData(u, now, ctx) })));
 
   return (
@@ -112,6 +120,28 @@ export default async function MennicaPage() {
           </ul>
         )}
       </Card>
+
+      {decisions.length > 0 && (
+        <Card className="mb-4">
+          <CardTitle hint={`${decisions.length}`}>
+            <span className="flex items-center gap-2">
+              <History size={16} /> Historia potwierdzeń
+            </span>
+          </CardTitle>
+          <ul className="flex flex-col gap-2">
+            {decisions.map((h) => (
+              <li key={`${h.clientId}-${h.at}`} className="rounded-2xl bg-card-2 px-4 py-3 text-sm">
+                <div>
+                  {clientName(h.clientId)}: <span className="text-muted line-through">{personName(h.previousEmployeeId)}</span> → {personName(h.employeeId)}
+                </div>
+                <div className="text-xs text-muted">
+                  {userName(h.by)} · {stamp.format(new Date(h.at))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {previews.map(({ user, orbit }) =>

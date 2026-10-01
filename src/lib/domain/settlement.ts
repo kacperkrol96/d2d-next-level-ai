@@ -69,6 +69,8 @@ export interface SettlementInput {
   commissions: number;
   /** „Dopłaty do Duetu” zielone w okresie — osobna pozycja (też z mnożnikiem KPI). */
   duoTopUps?: number;
+  /** „Dopłaty nadmarży” (nadmarża uzupełniona po wypłacie) — osobna pozycja, z mnożnikiem KPI. */
+  surchargeTopUps?: number;
   kpiMultiplier: number;
   /** Stałe dodatki (np. opieka nad zespołem) — bez mnożnika KPI. */
   additions?: number;
@@ -79,7 +81,7 @@ export interface SettlementInput {
 }
 
 export interface SettlementLine {
-  key: "commissions" | "duoTopUps" | "kpi" | "additions" | "deductions" | "fleet";
+  key: "commissions" | "duoTopUps" | "surchargeTopUps" | "kpi" | "additions" | "deductions" | "fleet";
   label: string;
   /** Kwota ze znakiem: dodatnia zwiększa, ujemna zmniejsza wypłatę. */
   amount: number;
@@ -102,7 +104,8 @@ export interface Settlement {
 export function computeSettlement(input: SettlementInput): Settlement {
   const commissions = roundMoney(input.commissions);
   const duoTopUps = roundMoney(input.duoTopUps ?? 0);
-  const gross = roundMoney(commissions + duoTopUps);
+  const surchargeTopUps = roundMoney(input.surchargeTopUps ?? 0);
+  const gross = roundMoney(commissions + duoTopUps + surchargeTopUps);
   const afterKpi = roundMoney(gross * input.kpiMultiplier);
   const additions = roundMoney(input.additions ?? 0);
   const deductions = roundMoney(input.deductions ?? 0);
@@ -110,6 +113,7 @@ export function computeSettlement(input: SettlementInput): Settlement {
   const net = roundMoney(afterKpi + additions - deductions - fleet);
   const lines: SettlementLine[] = [{ key: "commissions", label: "Prowizje", amount: commissions }];
   if (duoTopUps) lines.push({ key: "duoTopUps", label: "Dopłaty do Duetu", amount: duoTopUps });
+  if (surchargeTopUps) lines.push({ key: "surchargeTopUps", label: "Dopłaty nadmarży", amount: surchargeTopUps });
   if (afterKpi !== gross) {
     lines.push({ key: "kpi", label: `Mnożnik KPI ${Math.round(input.kpiMultiplier * 100)}%`, amount: roundMoney(afterKpi - gross) });
   }

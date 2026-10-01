@@ -25,8 +25,8 @@ import { buildTrajectory, statusChangesSince, type StatusChange, type Trajectory
 export type EntryState = PaymentState | "unresolved";
 
 export interface CommissionEntry {
-  /** base = prowizja (Solo / audytor), duoTopUp = „Dopłata do Duetu”. */
-  kind: "base" | "duoTopUp";
+  /** base = prowizja (Solo / audytor), duoTopUp = „Dopłata do Duetu”, surchargeTopUp = „Dopłata nadmarży”. */
+  kind: "base" | "duoTopUp" | "surchargeTopUp";
   clientId: string;
   clientName: string;
   city: string;
@@ -56,6 +56,8 @@ export interface Earnings {
   periodGreenTotal: number;
   /** W tym „Dopłaty do Duetu” zielone w bieżącym okresie. */
   periodDuoTopUps: number;
+  /** W tym „Dopłaty nadmarży” zielone w bieżącym okresie. */
+  periodSurchargeTopUps: number;
   /** Potrącenia w bieżącym okresie (dodatnia kwota). */
   periodDeductions: number;
   period: SettlementPeriod;
@@ -157,6 +159,8 @@ export function salesLevelState(employeeId: string, highestLevel: number, ctx: P
   return { timeline, own, structure, progress };
 }
 
+const PAYMENT_LABEL = { base: "Solo", duoTopUp: "Dopłata do Duetu", surchargeTopUp: "Dopłata nadmarży" } as const;
+
 export function salesEntries(employeeId: string, ctx: PortfolioContext, timeline: (t: Date) => number, currentLevel: number): CommissionEntry[] {
   const { config } = ctx;
   return ctx.clients
@@ -178,13 +182,22 @@ export function salesEntries(employeeId: string, ctx: PortfolioContext, timeline
       // Stawka wg poziomu sprzed klienta (z chwili pierwszego zazielenienia).
       const level = f.greenAt ? timeline(f.greenAt) : currentLevel;
       const levelConfig = config.salesLevels.find((l) => l.level === level)!;
-      const payments = salesClientPayments({ agreements: f.agreements, samVat: f.samVat, surchargeNet: rc.terms.surchargeNet }, levelConfig, config);
+      const payments = salesClientPayments(
+        {
+          agreements: f.agreements,
+          samVat: f.samVat,
+          surchargeNet: rc.terms.surchargeNet,
+          surchargeSetAt: rc.terms.surchargeSetAt ? new Date(rc.terms.surchargeSetAt) : null,
+        },
+        levelConfig,
+        config,
+      );
       const notes: string[] = [];
       if (f.samVat) notes.push(`sam VAT −${Math.round(config.rules.samVatReduction * 100)}%`);
       if (rc.terms.surchargeNet === null) notes.push("nadmarża nieuzupełniona");
       notes.push(`poziom ${level}`);
       return payments.map((p) => {
-        const label = p.kind === "base" ? "Solo" : "Dopłata do Duetu";
+        const label = PAYMENT_LABEL[p.kind];
         const detail = [label, ...notes].join(" · ");
         return {
           ...base,
@@ -300,6 +313,7 @@ export function summarize(entries: CommissionEntry[], ctx: PortfolioContext): Ea
     greyTotal: roundMoney(entries.filter((e) => e.state === "grey").reduce((s, e) => s + e.amount, 0)),
     periodGreenTotal: roundMoney(green.filter((e) => inPeriod(e.greenAt)).reduce((s, e) => s + e.amount, 0)),
     periodDuoTopUps: roundMoney(green.filter((e) => e.kind === "duoTopUp" && inPeriod(e.greenAt)).reduce((s, e) => s + e.amount, 0)),
+    periodSurchargeTopUps: roundMoney(green.filter((e) => e.kind === "surchargeTopUp" && inPeriod(e.greenAt)).reduce((s, e) => s + e.amount, 0)),
     periodDeductions: roundMoney(-deductions.reduce((s, e) => s + e.amount, 0)),
     period,
     latestGreen,

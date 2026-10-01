@@ -6,7 +6,7 @@ import { buildMockData } from "@/lib/crm/mock-data";
 import { academyStages } from "@/lib/academy/content";
 import type { AcademyProgress, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
 import { recordYellowCard, type YellowCard } from "@/lib/domain/yellow-card";
-import type { AppClientData, DataSource, KpiInputs, SalesAttribution } from "./types";
+import type { AppClientData, DataSource, KpiInputs, SalesAttribution, SalesDecision } from "./types";
 
 const kpiInputs: Record<string, KpiInputs> = {
   "e-anna": { approvedFiveStarReviews: 2, reportingPct: 97, auditorKpi: null },
@@ -21,6 +21,7 @@ export class MockDataSource implements DataSource {
   private readonly crmProvider = new MockCrm();
   private yellowCards: YellowCard[] = [];
   private adminAttributions: SalesAttribution[] = [];
+  private decisions: SalesDecision[] = [];
   private academy = new Map<string, AcademyProgress>(seedAcademy());
 
   async getConfig() {
@@ -56,8 +57,13 @@ export class MockDataSource implements DataSource {
     return { terms, attributions: [...attributions, ...this.adminAttributions], leadExceptions };
   }
 
-  async confirmSalesPerson(clientId: string, employeeId: string, adminId: string) {
-    this.adminAttributions.push({ clientId, employeeId, source: "admin", at: new Date().toISOString(), note: `potwierdził ${adminId}` });
+  async confirmSalesPerson(d: SalesDecision) {
+    this.adminAttributions.push({ clientId: d.clientId, employeeId: d.employeeId, source: "admin", at: d.at, note: `potwierdził ${d.by}` });
+    this.decisions.unshift(d);
+  }
+
+  async salesDecisions() {
+    return this.decisions;
   }
 
   async academyStages(track: AcademyTrack) {

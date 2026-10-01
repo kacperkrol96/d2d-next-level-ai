@@ -110,8 +110,11 @@ export interface PaymentAgreement extends SalesAgreementInput {
 export type PaymentState = CommissionState | "clawback";
 
 export interface SalesPayment {
-  /** base = prowizja Solo (pierwsza zielona umowa), duoTopUp = „Dopłata do Duetu”. */
-  kind: "base" | "duoTopUp";
+  /**
+   * base = prowizja Solo (pierwsza zielona umowa), duoTopUp = „Dopłata do Duetu”,
+   * surchargeTopUp = „Dopłata nadmarży” (nadmarża uzupełniona po wypłacie).
+   */
+  kind: "base" | "duoTopUp" | "surchargeTopUp";
   state: PaymentState;
   /** Kwota (ujemna przy potrąceniu). */
   amount: number;
@@ -129,11 +132,53 @@ const earliestDate = (dates: (Date | null)[]) => dates.filter((d): d is Date => 
  * - umowa negatywna nie liczy się do Solo/Duet; utrata po wypłacie → potrącenie.
  */
 export function salesClientPayments(
-  input: { agreements: PaymentAgreement[]; samVat: boolean; surchargeNet: number | null },
+  input: {
+    agreements: PaymentAgreement[];
+    samVat: boolean;
+    surchargeNet: number | null;
+    /** Kiedy admin uzupełnił nadmarżę (null = od początku / nieuzupełniona). */
+    surchargeSetAt?: Date | null;
+  },
   level: SalesLevel,
   config: AppConfig,
 ): SalesPayment[] {
-  const { agreements, samVat, surchargeNet } = input;
+  const withSurcharge = paymentsFor(input.agreements, input.samVat, input.surchargeNet, level, config);
+  const setAt = input.surchargeSetAt ?? null;
+  if (!setAt || !input.surchargeNet) return withSurcharge;
+  return applyLateSurcharge(withSurcharge, paymentsFor(input.agreements, input.samVat, null, level, config), setAt);
+}
+
+/**
+ * Nadmarża uzupełniona PO zazielenieniu: płatność wypłacona wcześniej zostaje bez nadmarży,
+ * a różnica wchodzi jako „Dopłata nadmarży” w najbliższym rozliczeniu (zielona od chwili wpisania).
+ * Potrącenie po spadku zwraca to, co faktycznie wypłacono.
+ */
+function applyLateSurcharge(withS: SalesPayment[], withoutS: SalesPayment[], setAt: Date): SalesPayment[] {
+  let topUp = 0;
+  const out = withS.map((p, i) => {
+    const before = p.greenAt !== null && p.greenAt.getTime() < setAt.getTime();
+    if (!before) return p;
+    const plain = withoutS[i].amount;
+    if (p.state === "green") {
+      topUp += p.amount - plain;
+      return { ...p, amount: plain };
+    }
+    if (p.state === "clawback") {
+      const topUpPaid = p.droppedAt !== null && setAt.getTime() < p.droppedAt.getTime();
+      if (topUpPaid) {
+        topUp += plain - p.amount; // obie kwoty ujemne: różnica = wypłacona dopłata
+        return p;
+      }
+      return { ...p, amount: plain };
+    }
+    return p;
+  });
+  topUp = roundMoney(topUp);
+  if (topUp > 0) out.push({ kind: "surchargeTopUp", state: "green", amount: topUp, greenAt: setAt, droppedAt: null });
+  return out;
+}
+
+function paymentsFor(agreements: PaymentAgreement[], samVat: boolean, surchargeNet: number | null, level: SalesLevel, config: AppConfig): SalesPayment[] {
   if (agreements.length === 0) return [];
   const amount = (scope: SalesScope, list: PaymentAgreement[]) => commissionAmount(scope, list.map((a) => a.valueNet), samVat, surchargeNet, level, config).total;
   const isActive = (a: PaymentAgreement) => a.category !== "negative";

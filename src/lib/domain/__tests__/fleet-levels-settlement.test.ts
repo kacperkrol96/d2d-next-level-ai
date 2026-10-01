@@ -208,6 +208,18 @@ describe("poziom w chwili zazielenienia prowizji", () => {
     expect(tl(d(20))).toBe(5);
   });
 
+  it("awans działa od następnej umowy — umowa, która daje awans, płatna wg starej stawki (handlowiec i audytor)", () => {
+    const tl = levelTimeline([own(1), own(2), own(3), own(3)], levelFor);
+    // dwie umowy tego samego dnia: obie płatne wg poziomu sprzed nich
+    expect(tl(d(3))).toBe(1);
+    const auditorFor = (o: number, s: number) =>
+      auditorLevelFor({ ownClients: o, structureClients: s, activePeople: 0 }, config.auditorLevels).current.level;
+    const need = config.auditorLevels.find((l) => l.level === 2)!.clientsToReach;
+    const atl = levelTimeline(Array.from({ length: need + 1 }, (_, i) => own(1 + i)), auditorFor);
+    expect(atl(d(need))).toBe(1); // umowa dająca awans — stara stawka
+    expect(atl(d(need + 1))).toBe(2); // kolejna — nowa stawka
+  });
+
   it("brak zdarzeń = poziom startowy", () => {
     expect(levelTimeline([], levelFor, 3)(d(1))).toBe(3);
   });

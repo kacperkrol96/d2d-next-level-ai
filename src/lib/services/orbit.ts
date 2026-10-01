@@ -76,8 +76,9 @@ function monthlyFleetCosts(entries: CommissionEntry[], ctx: PortfolioContext): M
 function settlementFor(earnings: Earnings, kpi: KpiResult, fleetCosts: MonthlyFleetCost[]) {
   const fleet = fleetDeductionForPeriod(earnings.period, fleetCosts);
   const settlement = computeSettlement({
-    commissions: roundMoney(earnings.periodGreenTotal - earnings.periodDuoTopUps),
+    commissions: roundMoney(earnings.periodGreenTotal - earnings.periodDuoTopUps - earnings.periodSurchargeTopUps),
     duoTopUps: earnings.periodDuoTopUps,
+    surchargeTopUps: earnings.periodSurchargeTopUps,
     kpiMultiplier: kpi.multiplier,
     deductions: earnings.periodDeductions,
     fleetCost: fleet.total,

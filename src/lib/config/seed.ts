@@ -203,5 +203,49 @@ export const seedConfig: AppConfig = {
   // Data włączenia reguły ustawi admin (2 tygodnie po starcie pilota).
   appLeadRule: { enforceFrom: null },
 
-  academy: { passThreshold: 0.8, retryCooldownMinutes: 30, requireLessonsBeforeExam: true },
+  academy: { passThreshold: 0.8, retryCooldownMinutes: 30, requireLessonsBeforeExam: true, videoWatchedShare: 0.9 },
+
+  safety: {
+    tiers: [
+      { minMeasurements: 0, base: 0, perExtra: 0 },
+      { minMeasurements: 5, base: 3750, perExtra: 200 },
+      { minMeasurements: 10, base: 7000, perExtra: 250 },
+      { minMeasurements: 15, base: 10000, perExtra: 300 },
+    ],
+    // Stawka minimalna godzinowa (umowa zlecenia) — wartość do uzupełnienia przez admina, do potwierdzenia z prawnikiem.
+    minHourlyRate: 30.5,
+    applyKpiMultiplier: true,
+  },
+
+  cards: {
+    yellowReasons: {
+      late: "Spóźnienie",
+      no_report: "Brak raportu w CRM / aplikacji",
+      no_gops: "Brak GOPS",
+      amount_before_measurement: "Obietnica kwoty przed pomiarem",
+      client_pressure: "Presja na kliencie",
+      kpi_below_minimum: "Wynik KPI poniżej 30 pkt",
+    },
+    red: { lateness: 3, absences: 2, yellowCards: 2, windowDays: 90 },
+  },
+
+  rhythm: {
+    auditor: {
+      bookingDays: [1, 3, 5],
+      meetingDays: [2, 4, 6],
+      bookingHours: { from: 9, to: 20 },
+      cycle: { leads: 12, meetings: 6, agreements: 2, measurements: 1 },
+      week: { booked: 36, held: 18 },
+    },
+    briefings: [
+      { days: [1, 3, 5], time: "08:30", title: "Odprawa", place: "online" },
+      { days: [1], time: "08:00", title: "Odprawa w biurze (wszyscy)", place: "biuro" },
+    ],
+    closeDayDeadline: "21:00",
+    minRecordedShare: { auditor: 0.2, sales: 0.2 },
+  },
+
+  field: { areaCooldownDays: 30, areaCooldownMode: "warning", maxQualifyingQuestions: 3, maxRebuttalsPerObjection: 3 },
+
+  contractScrollTheme: "parchment",
 };

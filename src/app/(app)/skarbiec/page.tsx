@@ -41,7 +41,9 @@ function EntryList({ entries, tone }: { entries: CommissionEntry[]; tone: Tone }
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-sm">
                 {e.clientName} <span className="text-xs text-muted">· {e.city}</span>
-                {e.kind === "duoTopUp" && <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] text-gold">Dopłata do Duetu</span>}
+                {e.kind !== "base" && (
+                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] text-gold">{e.kind === "duoTopUp" ? "Dopłata do Duetu" : "Dopłata nadmarży"}</span>
+                )}
               </div>
               <div className="truncate text-xs text-muted">
                 {tone === "grey" && steps(e.stepsToGreen) ? <span className="text-white/80">{steps(e.stepsToGreen)} · </span> : null}

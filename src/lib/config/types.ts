@@ -197,13 +197,67 @@ export interface AppLeadRule {
 
 /** Zasady Akademii (edytowalne przez admina). */
 export interface AcademyRules {
-  /** Próg zaliczenia egzaminu (0–1), np. 0.8 = 80% poprawnych odpowiedzi. */
+  /** Próg zaliczenia egzaminu (0–1), np. 0.8 = 80% punktów. */
   passThreshold: number;
+  /** Lekcja filmowa zaliczona po obejrzeniu takiej części filmu (0–1). */
+  videoWatchedShare: number;
   /** Ile minut odczekać przed kolejnym podejściem po niezdanym egzaminie (0 = od razu). */
   retryCooldownMinutes: number;
   /** Egzamin dostępny dopiero po ukończeniu wszystkich lekcji etapu. */
   requireLessonsBeforeExam: boolean;
 }
+
+/** Próg Safety: od `minMeasurements` pomiarów w miesiącu → podstawa + stawka za każdy pomiar powyżej progu. */
+export interface SafetyTier {
+  minMeasurements: number;
+  base: number;
+  perExtra: number;
+}
+
+/** System wynagrodzenia audytora SAFETY (miesięczny, wg liczby pomiarów). */
+export interface SafetyRules {
+  tiers: SafetyTier[];
+  /** Umowa zlecenia poniżej pierwszego progu: co najmniej stawka minimalna × godziny z aplikacji (do potwierdzenia z prawnikiem). */
+  minHourlyRate: number;
+  /** Mnożnik KPI stosowany do całej wypłaty Safety. */
+  applyKpiMultiplier: boolean;
+}
+
+export type CardReason = "late" | "no_report" | "no_gops" | "amount_before_measurement" | "client_pressure" | "kpi_below_minimum";
+
+/** Kartki: żółte (powody) i zasada czerwonej. */
+export interface CardRules {
+  yellowReasons: Record<CardReason, string>;
+  red: { lateness: number; absences: number; yellowCards: number; windowDays: number };
+}
+
+/** Rytm pracy i cele dnia. Dni tygodnia: 1 = poniedziałek … 7 = niedziela. */
+export interface WorkRhythm {
+  auditor: {
+    bookingDays: number[];
+    meetingDays: number[];
+    bookingHours: { from: number; to: number };
+    cycle: { leads: number; meetings: number; agreements: number; measurements: number };
+    week: { booked: number; held: number };
+  };
+  briefings: { days: number[]; time: string; title: string; place: string }[];
+  /** „Zamknij dzień” do tej godziny (HH:MM); później = dzień niezaliczony + żółta kartka. */
+  closeDayDeadline: string;
+  /** Minimalny udział nagranych spotkań (0–1). */
+  minRecordedShare: { auditor: number; sales: number };
+}
+
+/** Zasady terenu i leadów. */
+export interface FieldRules {
+  /** Ten sam rejon maksymalnie raz na tyle dni. */
+  areaCooldownDays: number;
+  /** Co robić przy próbie wcześniejszego przypisania: ostrzeżenie czy blokada. */
+  areaCooldownMode: "warning" | "block";
+  maxQualifyingQuestions: number;
+  maxRebuttalsPerObjection: number;
+}
+
+export type ContractScrollTheme = "parchment" | "cyberpunk" | "retro";
 
 export interface AppConfig {
   salesLevels: SalesLevel[];
@@ -219,6 +273,11 @@ export interface AppConfig {
   kpiWeightRules: KpiWeightRules;
   appLeadRule: AppLeadRule;
   academy: AcademyRules;
+  safety: SafetyRules;
+  cards: CardRules;
+  rhythm: WorkRhythm;
+  field: FieldRules;
+  contractScrollTheme: ContractScrollTheme;
   samVat: SamVatRule;
   /** Strefa czasowa firmy — daty okresów liczymy w czasie polskim. */
   timeZone: string;

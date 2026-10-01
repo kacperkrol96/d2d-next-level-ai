@@ -51,11 +51,11 @@ export default async function KlientPage(props: PageProps<"/skarbiec/klient/[id]
               return (
                 <div key={`${c.kind}-${c.state}`}>
                   <div className={`text-xs ${label.tone}`}>
-                    {c.kind === "duoTopUp" ? "Dopłata do Duetu · " : ""}
+                    {c.kind === "duoTopUp" ? "Dopłata do Duetu · " : c.kind === "surchargeTopUp" ? "Dopłata nadmarży · " : ""}
                     {label.text}
                   </div>
                   {c.state !== "unresolved" && (
-                    <div className={`num font-semibold ${label.tone} ${c.kind === "duoTopUp" ? "text-xl" : "text-3xl"}`}>
+                    <div className={`num font-semibold ${label.tone} ${c.kind !== "base" ? "text-xl" : "text-3xl"}`}>
                       {c.amount < 0 ? "−" : ""}
                       {formatPLN(Math.abs(c.amount))}
                     </div>

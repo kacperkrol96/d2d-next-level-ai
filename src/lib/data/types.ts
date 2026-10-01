@@ -25,6 +25,8 @@ export interface ClientTerms {
   incomeTier: IncomeTier | null;
   /** Nadmarża netto klienta (null = nieuzupełniona). */
   surchargeNet: number | null;
+  /** Kiedy admin wpisał nadmarżę (ISO). Wpis po zazielenieniu → „Dopłata nadmarży”. */
+  surchargeSetAt?: string | null;
   /** „Sam VAT” z oferty — ma pierwszeństwo przed regułą (null = brak oferty). */
   samVatFromOffer: boolean | null;
 }
@@ -40,6 +42,16 @@ export interface SalesAttribution {
   /** ISO — kiedy (dla leadu: data założenia, ważna dla reguły „Nie ma w aplikacji…”). */
   at: string;
   note?: string;
+}
+
+/** Wpis w historii potwierdzeń handlowca (Zarząd / Admin): kto, kiedy, poprzednia wartość. */
+export interface SalesDecision {
+  clientId: string;
+  employeeId: string;
+  /** Handlowiec przypisany wcześniej (null = nierozpoznany). */
+  previousEmployeeId: string | null;
+  by: string;
+  at: string;
 }
 
 /** Wyjątek managera od reguły „Nie ma w aplikacji = nie ma klienta”. */
@@ -73,7 +85,9 @@ export interface DataSource {
   saveYellowCard(card: YellowCard): Promise<void>;
   appClientData(): Promise<AppClientData>;
   /** Admin potwierdza handlowca (np. podpowiedź z inicjałów) jednym kliknięciem. */
-  confirmSalesPerson(clientId: string, employeeId: string, adminId: string): Promise<void>;
+  confirmSalesPerson(decision: SalesDecision): Promise<void>;
+  /** Historia potwierdzeń (najnowsze pierwsze). */
+  salesDecisions(): Promise<SalesDecision[]>;
   /** Akademia: etapy ścieżki (treści), postęp osoby, zapis lekcji i podejść do egzaminu. */
   academyStages(track: AcademyTrack): Promise<AcademyStage[]>;
   academyProgress(userId: string): Promise<AcademyProgress>;
