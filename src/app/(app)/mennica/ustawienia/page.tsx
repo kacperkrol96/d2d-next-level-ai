@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, FileSignature, Palette, ScrollText } from "lucide-react";
+import { ArrowLeft, FileSignature, Palette, PlayCircle, ScrollText } from "lucide-react";
+import { academyVideos } from "@/lib/academy/content";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
 import type { ContractTrack } from "@/lib/contracts/types";
 import type { ContractScrollTheme } from "@/lib/config/types";
 import { getDataSource } from "@/lib/data";
 import { currentContract } from "@/lib/domain/contract";
-import { publishContract, setContractTheme } from "./actions";
+import { publishContract, setContractTheme, setVideoLink } from "./actions";
 
 const themes: { key: ContractScrollTheme; label: string; description: string }[] = [
   { key: "parchment", label: "Pergamin", description: "Zwój z drewnianymi wałkami i woskową pieczęcią" },
@@ -19,12 +20,13 @@ const stamp = new Intl.DateTimeFormat("pl-PL", { dateStyle: "short", timeStyle: 
 export default async function UstawieniaPage({ searchParams }: PageProps<"/mennica/ustawienia">) {
   await requireRole(["admin"]);
   const source = getDataSource();
-  const [config, versions, acceptances, users, params] = await Promise.all([
+  const [config, versions, acceptances, users, params, links] = await Promise.all([
     source.getConfig(),
     source.contractVersions(),
     source.contractAcceptances(),
     source.listUsers(),
     searchParams,
+    source.videoLinks(),
   ]);
   const name = (id: string) => users.find((u) => u.id === id)?.name ?? id;
   const error = typeof params.blad === "string" ? params.blad : null;
@@ -40,7 +42,7 @@ export default async function UstawieniaPage({ searchParams }: PageProps<"/menni
       <Link href="/mennica" className="mb-3 inline-flex items-center gap-1 text-sm text-muted">
         <ArrowLeft size={14} /> Mennica
       </Link>
-      <PageHeader title="Ustawienia" subtitle="Panel Zarządu — kontrakty i wygląd zwoju" />
+      <PageHeader title="Ustawienia" subtitle="Panel Zarządu — kontrakty, wygląd zwoju, filmy Akademii" />
       {error && <p className="mb-4 rounded-2xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
       {ok && <p className="mb-4 rounded-2xl bg-earned/10 px-4 py-3 text-sm text-earned">{ok}</p>}
 
@@ -98,6 +100,35 @@ export default async function UstawieniaPage({ searchParams }: PageProps<"/menni
           </Card>
         );
       })}
+
+      <Card className="mb-4">
+        <div id="filmy" />
+        <CardTitle hint={`${Object.keys(links).length}/${academyVideos.length} przypisanych`}>
+          <span className="flex items-center gap-2">
+            <PlayCircle size={16} className="text-accent-soft" /> Filmy Akademii
+          </span>
+        </CardTitle>
+        <p className="mb-3 text-xs text-muted">
+          Wklej link do filmu z firmowego YouTube (ustawiony jako „Niepubliczny”). Link nie jest pokazywany w aplikacji — film odtwarza się we własnym odtwarzaczu, tylko po zalogowaniu.
+          Bez linku lekcja pokazuje atrapę.
+        </p>
+        <ul className="flex flex-col gap-2">
+          {academyVideos.map((v) => (
+            <li key={v.key}>
+              <form action={setVideoLink} className="flex flex-col gap-2 rounded-2xl bg-card-2 px-4 py-3 sm:flex-row sm:items-center">
+                <input type="hidden" name="key" value={v.key} />
+                <span className="text-sm sm:w-56 sm:shrink-0">
+                  <span className="num mr-2 text-muted">{v.key}</span>
+                  {v.title}
+                  <span className={`ml-2 text-[11px] ${links[v.key] ? "text-earned" : "text-muted"}`}>{links[v.key] ? "✓ przypisany" : "atrapa"}</span>
+                </span>
+                <input name="url" placeholder="https://youtu.be/…" className="min-w-0 flex-1 rounded-xl border border-line bg-card px-3 py-2 text-sm" />
+                <button className="rounded-full bg-accent px-4 py-2 text-xs font-medium">Zapisz</button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <Card>
         <CardTitle hint={`${acceptances.length}`}>

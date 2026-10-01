@@ -7,7 +7,8 @@ import { academyStages } from "@/lib/academy/content";
 import { seedContracts } from "@/lib/contracts/seed";
 import type { ContractAcceptance, ContractTrack, ContractVersion } from "@/lib/contracts/types";
 import type { AppConfig } from "@/lib/config/types";
-import type { AcademyProgress, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
+import { exams } from "@/lib/academy/exams";
+import type { AcademyProgress, AcademyTrack, ExamAttempt, FormSubmission } from "@/lib/academy/types";
 import { recordEvent, type PersonEvent } from "@/lib/domain/cards";
 import type { PlanChange } from "@/lib/domain/safety";
 import { MOCK_EPOCH } from "@/lib/crm/mock-data";
@@ -107,12 +108,18 @@ export class MockDataSource implements DataSource {
     return this.decisions;
   }
 
+  private videos: Record<string, string> = {};
+
   async academyStages(track: AcademyTrack) {
     return academyStages.filter((s) => s.track === track);
   }
 
+  async academyExam(examId: string) {
+    return exams.find((e) => e.id === examId) ?? null;
+  }
+
   async academyProgress(userId: string): Promise<AcademyProgress> {
-    return this.academy.get(userId) ?? { userId, lessonsDone: [], attempts: [] };
+    return this.academy.get(userId) ?? { userId, lessonsDone: [], videoWatched: {}, attempts: [], forms: [] };
   }
 
   async markLessonDone(userId: string, lessonId: string) {
@@ -120,9 +127,34 @@ export class MockDataSource implements DataSource {
     if (!p.lessonsDone.includes(lessonId)) this.academy.set(userId, { ...p, lessonsDone: [...p.lessonsDone, lessonId] });
   }
 
+  async saveVideoProgress(userId: string, lessonId: string, share: number) {
+    const p = await this.academyProgress(userId);
+    const best = Math.max(p.videoWatched[lessonId] ?? 0, Math.min(1, Math.max(0, share)));
+    this.academy.set(userId, { ...p, videoWatched: { ...p.videoWatched, [lessonId]: best } });
+  }
+
   async saveExamAttempt(userId: string, attempt: ExamAttempt) {
     const p = await this.academyProgress(userId);
     this.academy.set(userId, { ...p, attempts: [...p.attempts, attempt] });
+  }
+
+  async updateExamAttempt(userId: string, attempt: ExamAttempt) {
+    const p = await this.academyProgress(userId);
+    this.academy.set(userId, { ...p, attempts: p.attempts.map((a) => (a.id === attempt.id ? attempt : a)) });
+  }
+
+  async saveFormSubmission(submission: FormSubmission) {
+    const p = await this.academyProgress(submission.personId);
+    this.academy.set(submission.personId, { ...p, forms: [...p.forms, submission] });
+  }
+
+  async videoLinks() {
+    return { ...this.videos };
+  }
+
+  async setVideoLink(key: string, youtubeId: string | null) {
+    if (youtubeId) this.videos[key] = youtubeId;
+    else delete this.videos[key];
   }
 
 }
@@ -176,14 +208,51 @@ function seedAcceptances(): ContractAcceptance[] {
   ];
 }
 
-/** Postęp testowy: Marek ma za sobą dwa etapy, Ola jeden. */
+/**
+ * Postęp testowy: Marek zdał D1, egzamin D2 czeka na ocenę Anny; Ola w trakcie D1;
+ * Anna ma ścieżkę terenową za sobą i czyta Podręcznik Managera.
+ */
 function seedAcademy(): [string, AcademyProgress][] {
-  const day = 24 * 60 * 60 * 1000;
-  const ago = (d: number) => new Date(Date.now() - d * day).toISOString();
-  const passed = (stageId: string, score: number, d: number): ExamAttempt => ({ stageId, score, passed: true, at: ago(d), answers: {} });
+  const d1 = ["d1-kontrakt", "d1-wynagrodzenia", "d1-prezentacja"];
+  const d2 = academyStages.find((s) => s.id === "d2")!.lessons.map((l) => l.id);
+  const d3 = ["d3-prospecting", "d3-walkthrough"];
+  const watched = (ids: string[]) => Object.fromEntries(ids.filter((id) => id.startsWith("film-")).map((id) => [id, 1]));
+  const attempt = (examId: string, days: number, points: number | null, passed: boolean | null, answers: ExamAttempt["answers"] = {}): ExamAttempt => ({
+    id: `seed-${examId}-${days}`,
+    examId,
+    stageId: examId,
+    at: isoAgo(days, 10),
+    answers,
+    autoPoints: points ?? 0,
+    review: points === null ? null : { points: {}, comment: "", by: "u-anna", at: isoAgo(days - 1, 10) },
+    points,
+    passed,
+  });
+  const form = (formId: FormSubmission["formId"], personId: string, days: number, decision: string | null): FormSubmission => ({
+    formId,
+    personId,
+    by: "u-anna",
+    at: isoAgo(days, 16),
+    values: {},
+    score: formId === "d2-scenki" ? 58 : null,
+    decision,
+  });
+  const marekD2Answers: ExamAttempt["answers"] = {
+    "d2-q1": "Bo pauza daje klientowi moment na „nie, dziękuję”.",
+    "d2-q11": "Rozumiem, dlatego zajmie nam to tylko dwie minuty — sprawdzimy, czy Pana dom w ogóle się kwalifikuje.",
+  };
   return [
-    ["u-marek", { userId: "u-marek", lessonsDone: ["s1-l1", "s1-l2", "s1-l3", "s2-l1", "s2-l2", "s3-l1"], attempts: [passed("s1", 1, 20), { stageId: "s2", score: 0.67, passed: false, at: ago(12), answers: {} }, passed("s2", 1, 11)] }],
-    ["u-anna", { userId: "u-anna", lessonsDone: ["s1-l1", "s1-l2", "s1-l3", "s2-l1", "s2-l2", "s3-l1", "s3-l2", "s4-l1"], attempts: [passed("s1", 1, 60), passed("s2", 1, 55), passed("s3", 1, 50), passed("s4", 1, 45)] }],
-    ["u-ola", { userId: "u-ola", lessonsDone: ["a1-l1", "a1-l2", "a2-l1"], attempts: [passed("a1", 1, 15)] }],
+    ["u-marek", { userId: "u-marek", lessonsDone: [...d1, ...d2], videoWatched: watched(d2), attempts: [attempt("d1", 20, 13, true), attempt("d2", 1, null, null, marekD2Answers)], forms: [] }],
+    ["u-ola", { userId: "u-ola", lessonsDone: ["d1-kontrakt"], videoWatched: {}, attempts: [], forms: [] }],
+    [
+      "u-anna",
+      {
+        userId: "u-anna",
+        lessonsDone: [...d1, ...d2, ...d3, "m1-1", "m1-2"],
+        videoWatched: watched(d2),
+        attempts: [attempt("d1", 90, 15, true), attempt("d2", 80, 18, true)],
+        forms: [form("d2-scenki", "u-anna", 79, "Gotowy do D3"), form("d3", "u-anna", 75, null), form("d4", "u-anna", 74, "Gotowy na samodzielność — start Ignition")],
+      },
+    ],
   ];
 }

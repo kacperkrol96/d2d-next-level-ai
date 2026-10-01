@@ -197,8 +197,10 @@ export interface AppLeadRule {
 
 /** Zasady Akademii (edytowalne przez admina). */
 export interface AcademyRules {
-  /** Próg zaliczenia egzaminu (0–1), np. 0.8 = 80% punktów. */
+  /** Domyślny próg zaliczenia egzaminu (0–1), np. 0.8 = 80% punktów. */
   passThreshold: number;
+  /** Próg dla konkretnego egzaminu (id egzaminu → 0–1), np. managerski 70%. */
+  examPassThresholds: Record<string, number>;
   /** Lekcja filmowa zaliczona po obejrzeniu takiej części filmu (0–1). */
   videoWatchedShare: number;
   /** Ile minut odczekać przed kolejnym podejściem po niezdanym egzaminie (0 = od razu). */

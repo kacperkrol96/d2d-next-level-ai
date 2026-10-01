@@ -1,4 +1,4 @@
-import type { AcademyProgress, AcademyStage, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
+import type { AcademyProgress, AcademyStage, AcademyTrack, ExamAttempt, ExamDef, FormSubmission } from "@/lib/academy/types";
 import type { AppUser } from "@/lib/auth/users";
 import type { AppConfig, IncomeTier } from "@/lib/config/types";
 import type { CrmProvider } from "@/lib/crm/types";
@@ -117,7 +117,17 @@ export interface DataSource {
   salesDecisions(): Promise<SalesDecision[]>;
   /** Akademia: etapy ścieżki (treści), postęp osoby, zapis lekcji i podejść do egzaminu. */
   academyStages(track: AcademyTrack): Promise<AcademyStage[]>;
+  /** Egzamin z kluczem — TYLKO serwer (nigdy do przeglądarki). */
+  academyExam(examId: string): Promise<ExamDef | null>;
   academyProgress(userId: string): Promise<AcademyProgress>;
   markLessonDone(userId: string, lessonId: string): Promise<void>;
+  /** Obejrzana część filmu (zapisujemy najwyższą). */
+  saveVideoProgress(userId: string, lessonId: string, share: number): Promise<void>;
   saveExamAttempt(userId: string, attempt: ExamAttempt): Promise<void>;
+  /** Zapis oceny managera (podmiana podejścia o tym samym id). */
+  updateExamAttempt(userId: string, attempt: ExamAttempt): Promise<void>;
+  saveFormSubmission(submission: FormSubmission): Promise<void>;
+  /** Linki do filmów (klucz filmu → id filmu YouTube), przypisuje admin. */
+  videoLinks(): Promise<Record<string, string>>;
+  setVideoLink(key: string, youtubeId: string | null): Promise<void>;
 }

@@ -2,72 +2,79 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Hourglass, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { sendExam } from "@/app/(app)/akademia/actions";
-import { UnlockCelebration } from "./UnlockCelebration";
+import type { PublicExam } from "@/lib/academy/types";
 import type { ExamOutcome } from "@/lib/services/academy";
+import { UnlockCelebration } from "./UnlockCelebration";
 
-interface PublicQuestion {
-  id: string;
-  text: string;
-  options: string[];
-  multiple: boolean;
-}
+const pts = (n: number) => `${String(n).replace(".", ",")} pkt`;
 
-/** Egzamin: jedno pytanie na ekran, wynik sprawdzany automatycznie na serwerze. */
-export function ExamRunner({ stageId, stageTitle, questions, backHref }: { stageId: string; stageTitle: string; questions: PublicQuestion[]; backHref: string }) {
+/**
+ * Egzamin: jedno pytanie na ekran. Klucz odpowiedzi NIE jest w przeglądarce —
+ * pytania zamknięte sprawdza serwer, otwarte ocenia manager.
+ */
+export function ExamRunner({ stageId, exam, backHref }: { stageId: string; exam: PublicExam; backHref: string }) {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number[]>>({});
+  const [answers, setAnswers] = useState<Record<string, number | string>>({});
   const [outcome, setOutcome] = useState<ExamOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [pending, startTransition] = useTransition();
+  const questions = exam.questions;
 
   const q = questions[index];
-  const sel = answers[q?.id] ?? [];
+  const value = answers[q?.id];
+  const answered = (x: (typeof questions)[number]) =>
+    x.type === "choice" ? typeof answers[x.id] === "number" : x.points === 0 || String(answers[x.id] ?? "").trim().length > 0;
   const last = index === questions.length - 1;
-
-  const choose = (i: number) =>
-    setAnswers((a) => ({ ...a, [q.id]: q.multiple ? (sel.includes(i) ? sel.filter((x) => x !== i) : [...sel, i]) : [i] }));
 
   const submit = () =>
     startTransition(async () => {
       const res = await sendExam(stageId, answers);
       if ("error" in res) return setError(res.error);
       setOutcome(res);
-      if (res.result.passed && (res.unlocked || res.trackCompleted)) setCelebrate(true);
+      if (res.state === "passed" && (res.unlocked || res.trackCompleted)) setCelebrate(true);
     });
 
   if (outcome) {
-    const pct = Math.round(outcome.result.score * 100);
+    const review = outcome.state === "review";
+    const passed = outcome.state === "passed";
     return (
       <>
         <UnlockCelebration show={celebrate} title={outcome.unlocked?.title ?? null} trackCompleted={outcome.trackCompleted} onClose={() => setCelebrate(false)} />
         <div className="card p-6 text-center sm:p-8">
-          <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${outcome.result.passed ? "bg-earned/15 text-earned" : "bg-danger/15 text-danger"}`}>
-            {outcome.result.passed ? <Check size={30} /> : <X size={30} />}
+          <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${review ? "bg-gold/15 text-gold" : passed ? "bg-earned/15 text-earned" : "bg-danger/15 text-danger"}`}>
+            {review ? <Hourglass size={28} /> : passed ? <Check size={30} /> : <X size={30} />}
           </div>
-          <div className="num mt-4 text-5xl font-semibold">{pct}%</div>
-          <div className="mt-1 text-sm text-muted">
-            {outcome.result.correctCount} z {outcome.result.total} poprawnych · próg {Math.round(outcome.threshold * 100)}%
+          <div className={`mt-4 text-lg ${review ? "text-gold" : passed ? "text-earned" : "text-danger"}`}>
+            {review ? "Wysłane — czeka na ocenę managera" : passed ? "Egzamin zdany" : "Tym razem się nie udało"}
           </div>
-          <div className={`mt-3 text-lg ${outcome.result.passed ? "text-earned" : "text-danger"}`}>{outcome.result.passed ? "Egzamin zdany" : "Tym razem się nie udało"}</div>
-          {outcome.unlocked && <div className="mt-1 text-sm text-gold">Odblokowany etap: {outcome.unlocked.title}</div>}
+          {outcome.closedTotal > 0 && (
+            <div className="mt-2 text-sm text-muted">
+              Pytania zamknięte: <span className="num text-white">{outcome.closedCorrect}/{outcome.closedTotal}</span> poprawnych ({pts(outcome.autoPoints)})
+            </div>
+          )}
+          <div className="mt-1 text-xs text-muted">
+            Próg zaliczenia: {pts(outcome.passPoints)} z {pts(outcome.maxPoints)}
+            {review && " — odpowiedzi otwarte oceni manager"}
+          </div>
+          {outcome.unlocked && <div className="mt-2 text-sm text-gold">Odblokowany etap: {outcome.unlocked.title}</div>}
         </div>
-        {outcome.mistakes.length > 0 && (
-          <div className="mt-4 flex flex-col gap-3">
-            {outcome.mistakes.map((m) => (
-              <div key={m.question} className="card p-5">
-                <div className="text-sm font-medium">{m.question}</div>
-                <div className="mt-1 text-sm text-white/75">{m.explanation}</div>
-              </div>
-            ))}
+        {outcome.wrong.length > 0 && (
+          <div className="mt-4 card p-5">
+            <div className="mb-2 text-sm font-medium">Do powtórki (błędna odpowiedź):</div>
+            <ul className="list-disc pl-5 text-sm text-white/75">
+              {outcome.wrong.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
           </div>
         )}
         <Link href={backHref} className="mt-6 flex w-full items-center justify-center rounded-[20px] bg-card-2 py-4 font-medium">
-          Wróć do Akademii
+          Wróć do etapu
         </Link>
       </>
     );
@@ -76,8 +83,8 @@ export function ExamRunner({ stageId, stageTitle, questions, backHref }: { stage
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-sm text-muted">
-        <span>Egzamin · {stageTitle}</span>
-        <span className="num">
+        <span className="truncate pr-3">{exam.title}</span>
+        <span className="num shrink-0">
           {index + 1}/{questions.length}
         </span>
       </div>
@@ -86,6 +93,8 @@ export function ExamRunner({ stageId, stageTitle, questions, backHref }: { stage
           <span key={x.id} className={`h-1.5 flex-1 rounded-full ${i < index ? "bg-accent-soft" : i === index ? "bg-accent-soft/60" : "bg-white/[0.07]"}`} />
         ))}
       </div>
+
+      {index === 0 && <p className="mb-4 rounded-2xl bg-card-2 px-4 py-3 text-xs text-muted">{exam.instructions}</p>}
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -96,22 +105,46 @@ export function ExamRunner({ stageId, stageTitle, questions, backHref }: { stage
           transition={{ type: "spring", stiffness: 380, damping: 34 }}
           className="card p-6"
         >
-          <p className="num text-xl font-semibold leading-snug">{q.text}</p>
-          {q.multiple && <p className="mt-1 text-xs text-muted">Zaznacz wszystkie poprawne</p>}
-          <div className="mt-5 flex flex-col gap-2">
-            {q.options.map((o, i) => (
-              <button
-                key={o}
-                onClick={() => choose(i)}
-                className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left text-sm transition ${sel.includes(i) ? "border-accent-soft bg-accent/15" : "border-line bg-card-2 hover:border-white/15"}`}
-              >
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center ${q.multiple ? "rounded-md" : "rounded-full"} border ${sel.includes(i) ? "border-accent-soft bg-accent-soft" : "border-white/30"}`}>
-                  {sel.includes(i) && <Check size={12} strokeWidth={3} className="text-bg" />}
-                </span>
-                {o}
-              </button>
-            ))}
-          </div>
+          <p className="num text-lg font-semibold leading-snug sm:text-xl">{q.text}</p>
+          <p className="mt-1 text-xs text-muted">
+            {q.points > 0 ? pts(q.points) : "bez punktów — dla managera"} · {q.type === "choice" ? "jedna odpowiedź" : "odpowiedz własnymi słowami"}
+          </p>
+          {q.items && (
+            <ul className="mt-4 flex flex-col gap-1.5 rounded-2xl bg-card-2 p-4 text-sm">
+              {q.items.map((it, i) => (
+                <li key={it}>
+                  <span className="num mr-2 text-muted">{String.fromCharCode(65 + i)}.</span>
+                  {it}
+                </li>
+              ))}
+              <li className="mt-1 text-xs text-muted">Wpisz kolejność liter, np. „C, A, B…”, i krótko uzasadnij.</li>
+            </ul>
+          )}
+          {q.type === "choice" && q.options ? (
+            <div className="mt-5 flex flex-col gap-2">
+              {q.options.map((o, i) => (
+                <button
+                  key={o}
+                  onClick={() => setAnswers((a) => ({ ...a, [q.id]: i }))}
+                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left text-sm transition ${value === i ? "border-accent-soft bg-accent/15" : "border-line bg-card-2 hover:border-white/15"}`}
+                >
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${value === i ? "border-accent-soft bg-accent-soft" : "border-white/30"}`}>
+                    {value === i && <Check size={12} strokeWidth={3} className="text-bg" />}
+                  </span>
+                  {o}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <textarea
+              value={typeof value === "string" ? value : ""}
+              onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+              rows={5}
+              maxLength={4000}
+              placeholder="Twoja odpowiedź…"
+              className="mt-5 w-full rounded-2xl border border-line bg-card-2 px-4 py-3 text-sm outline-none focus:border-accent-soft"
+            />
+          )}
         </motion.div>
       </AnimatePresence>
 
@@ -124,15 +157,15 @@ export function ExamRunner({ stageId, stageTitle, questions, backHref }: { stage
         {last ? (
           <button
             onClick={submit}
-            disabled={pending || questions.some((x) => !(answers[x.id]?.length))}
+            disabled={pending || !questions.every(answered)}
             className="flex flex-1 items-center justify-center gap-2 rounded-[20px] bg-gradient-to-r from-accent to-accent-soft py-4 font-medium disabled:opacity-40"
           >
-            {pending ? "Sprawdzam…" : "Wyślij egzamin"}
+            {pending ? "Wysyłam…" : "Wyślij egzamin"}
           </button>
         ) : (
           <button
             onClick={() => setIndex((i) => i + 1)}
-            disabled={sel.length === 0}
+            disabled={!answered(q)}
             className="flex flex-1 items-center justify-center gap-2 rounded-[20px] bg-gradient-to-r from-accent to-accent-soft py-4 font-medium disabled:opacity-40"
           >
             Dalej <ArrowRight size={16} />

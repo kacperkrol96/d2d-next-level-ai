@@ -6,7 +6,9 @@ import { requireRole } from "@/lib/auth/session";
 import type { ContractTrack } from "@/lib/contracts/types";
 import type { ContractScrollTheme } from "@/lib/config/types";
 import { getDataSource } from "@/lib/data";
+import { academyVideos } from "@/lib/academy/content";
 import { nextContractVersion } from "@/lib/domain/contract";
+import { youtubeIdFrom } from "@/lib/domain/youtube";
 
 const THEMES: ContractScrollTheme[] = ["parchment", "cyberpunk", "retro"];
 
@@ -35,4 +37,17 @@ export async function publishContract(formData: FormData) {
   await source.publishContract(next);
   revalidatePath("/", "layout");
   redirect(`/mennica/ustawienia?ok=${encodeURIComponent(`Opublikowano wersję ${next.version}`)}#kontrakt-${track}`);
+}
+
+/** Admin przypisuje film z firmowego YouTube (niepubliczny) do lekcji. Pusty = atrapa. */
+export async function setVideoLink(formData: FormData) {
+  await requireRole(["admin"]);
+  const key = String(formData.get("key") ?? "");
+  const raw = String(formData.get("url") ?? "").trim();
+  if (!academyVideos.some((v) => v.key === key)) return;
+  const id = raw ? youtubeIdFrom(raw) : null;
+  if (raw && !id) redirect(`/mennica/ustawienia?blad=${encodeURIComponent(`Film ${key}: to nie jest link do YouTube`)}#filmy`);
+  await getDataSource().setVideoLink(key, id);
+  revalidatePath("/", "layout");
+  redirect(`/mennica/ustawienia?ok=${encodeURIComponent(id ? `Film ${key} przypisany` : `Film ${key}: przywrócono atrapę`)}#filmy`);
 }
