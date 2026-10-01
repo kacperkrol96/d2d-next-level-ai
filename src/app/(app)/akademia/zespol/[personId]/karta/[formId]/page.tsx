@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { formById, SCALE_LABELS } from "@/lib/academy/forms";
 import { requireRole } from "@/lib/auth/session";
+import { getDataSource } from "@/lib/data";
 import { canCoach } from "@/lib/services/academy";
 import { sendForm } from "../../../../actions";
 
@@ -14,6 +15,7 @@ export default async function KartaPage(props: PageProps<"/akademia/zespol/[pers
   const { blad } = await props.searchParams;
   const [person, form] = [await canCoach(user, personId), formById(formId)];
   if (!person || !form) notFound();
+  const { academy } = await getDataSource().getConfig();
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -74,6 +76,12 @@ export default async function KartaPage(props: PageProps<"/akademia/zespol/[pers
         {form.decision && (
           <Card className="border-gold/30">
             <CardTitle>Decyzja managera</CardTitle>
+            {form.scored && (
+              <p className="mb-3 text-xs text-muted">
+                Podpowiedź: zalecane min. {academy.scenkaRecommendedMin}/{form.sections.flatMap((x) => x.items).filter((i) => i.type === "scale").length * 5} pkt. Decyzja należy do
+                managera.
+              </p>
+            )}
             <div className="flex flex-col gap-2">
               {form.decision.options.map((o) => (
                 <label key={o} className="flex cursor-pointer items-center gap-3 rounded-2xl bg-card-2 px-4 py-3 text-sm">

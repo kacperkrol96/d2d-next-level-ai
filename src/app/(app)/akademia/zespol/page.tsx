@@ -44,7 +44,8 @@ export default async function ZespolAkademiaPage(props: PageProps<"/akademia/zes
                       className="flex items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-gold/[0.06] px-4 py-3 text-sm"
                     >
                       <span className="flex items-center gap-2">
-                        <Hourglass size={15} className="text-gold" /> Oceń egzamin {a.examId.toUpperCase()} · wysłany {dateFmt.format(new Date(a.at))}
+                        <Hourglass size={15} className="text-gold" /> Oceń egzamin {a.examId.toUpperCase()}
+                        {a.trial ? " (próbny)" : ""} · wysłany {dateFmt.format(new Date(a.at))}
                       </span>
                       <span className="text-xs text-gold">Oceń →</span>
                     </Link>

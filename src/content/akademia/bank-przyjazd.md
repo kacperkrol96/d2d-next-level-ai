@@ -21,7 +21,7 @@ To materiał do scenek. Moment: audytor PRZYJECHAŁ na umówiony audyt, a klient
 **Klient:** Wie Pan co, zastanawiałem się, po tym jak Pan umówił — skąd mam wiedzieć, że to nie oszustwo?
 
 1. **Przyjmij:** Rozumiem — i dobrze, że Pan o to pyta, na rynku chodzi dużo firm obiecujących złote góry.
-2. **Obróć:** Właśnie dlatego działamy z OC na 2 miliony, a program Czyste Powietrze można sprawdzić na oficjalnej rządowej stronie programu. Dziś nie biorę od Pana złotówki — robię tylko bezpłatny audyt.
+2. **Obróć:** Właśnie dlatego działamy z OC na 2 miliony, a program Czyste Powietrze można sprawdzić na czystepowietrze.gov.pl. Dziś nie biorę od Pana złotówki — robię tylko bezpłatny audyt.
 3. **Wróć:** Niech wejdziemy, pokażę Panu dokumenty i wszystko wyjaśnię. Mamy umówione — 20 minut i Pan ocenia sam.
 
 > Najważniejsza obiekcja przy progu. Nie argumentuj na siłę — uspokój, pokaż dokumenty, wejdź. Audyt buduje zaufanie lepiej niż słowa.

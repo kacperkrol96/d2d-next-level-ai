@@ -26,8 +26,8 @@ describe("Safety — wypłata audytora wg pomiarów w miesiącu", () => {
   it("umowa zlecenia: nie mniej niż stawka minimalna × godziny z aplikacji", () => {
     const r = safetyPay(3, config.safety, { contractType: "Umowa zlecenia", hoursWorked: 100, kpiMultiplier: 1 });
     expect(r.tierPay).toBe(0);
-    expect(r.hourlyMinimum).toBe(3050);
-    expect(r.total).toBe(3050);
+    expect(r.hourlyMinimum).toBe(3140);
+    expect(r.total).toBe(3140);
     expect(safetyPay(3, config.safety, { ...b2b, hoursWorked: 100 }).total).toBe(0);
   });
 

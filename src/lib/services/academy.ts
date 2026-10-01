@@ -8,6 +8,7 @@ import type { ContractVersion } from "@/lib/contracts/types";
 import { getDataSource } from "@/lib/data";
 import {
   applyReview,
+  isTrial,
   maxPoints,
   newAttempt,
   passPoints,
@@ -91,7 +92,7 @@ export interface StageView {
   track: AcademyTrack;
   lessons: (Lesson & { done: boolean; watched: number | null })[];
   /** Egzaminy etapu w wersji publicznej (bez kluczy). */
-  exams: Record<string, { title: string; maxPoints: number; passPoints: number }>;
+  exams: Record<string, { title: string; maxPoints: number; passPoints: number; trial: boolean; lastTrial: ExamAttempt | null }>;
 }
 
 /** Etap tylko, gdy nie jest zablokowany (inaczej null). Szuka na wszystkich ścieżkach osoby. */
@@ -107,7 +108,8 @@ export async function getStage(user: AppUser, stageId: string, now = new Date())
     for (const g of status.stage.gates) {
       if (g.kind !== "exam") continue;
       const exam = await source.academyExam(g.examId);
-      if (exam) exams[g.examId] = { title: exam.title, maxPoints: maxPoints(exam), passPoints: passPoints(exam, config.academy) };
+      const trials = progress.attempts.filter((a) => a.examId === g.examId && a.trial).sort((a, b) => b.at.localeCompare(a.at));
+      if (exam) exams[g.examId] = { title: exam.title, maxPoints: maxPoints(exam), passPoints: passPoints(exam, config.academy), trial: isTrial(exam, config.academy), lastTrial: trials[0] ?? null };
     }
     return {
       status,
@@ -177,6 +179,8 @@ export async function getExam(user: AppUser, stageId: string): Promise<{ view: S
 
 export interface ExamOutcome {
   state: "passed" | "failed" | "review";
+  /** Egzamin próbny — wynik nie odblokowuje etapu. */
+  trial: boolean;
   autoPoints: number;
   closedTotal: number;
   closedCorrect: number;
@@ -210,6 +214,7 @@ export async function submitExam(user: AppUser, stageId: string, rawAnswers: Rec
   const next = after.statuses[index + 1];
   return {
     state: attempt.passed === null ? "review" : attempt.passed ? "passed" : "failed",
+    trial: attempt.trial === true,
     autoPoints: attempt.autoPoints,
     closedTotal: closed.length,
     closedCorrect: closed.length - wrong.length,

@@ -76,7 +76,7 @@ _Pytania o skład — jedno po drugim, naturalnie._
 
 _Dzielisz na kartce: kwota : liczba osób = wynik zł/os. Zakreślasz próg._
 
-**Audytor:** Dobra wiadomość — wstępnie dochody Państwa kwalifikują się do poziomu [X] procent dofinansowania. Wysokość dofinansowania poznamy po pomiarze — zależy od progu dochodowego.
+**Audytor:** Dobra wiadomość — Państwa sytuacja pasuje do programu. Wysokość dofinansowania poznamy po pomiarze — zależy od progu dochodowego.
 
 **Ale — i tu jest haczyk. To jest dopiero jeden element układanki.** Żeby program przyjął wniosek, muszą być spełnione jeszcze kryteria techniczne domu — zapotrzebowanie energetyczne, stan ocieplenia, wiek pieca. Tego nie jestem w stanie sprawdzić dziś gołym okiem — do tego właśnie jest pomiarowiec. Dopiero jak mamy oba elementy razem — dochody i wynik pomiaru — wiemy, czy i ile Państwo dostają.
 

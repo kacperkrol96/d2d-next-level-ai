@@ -60,11 +60,12 @@ To NIE jest prognoza zarobków.
 
 - **Ścieżki**: terenowa **D1–D4** (audytor i handlowiec) + osobna **ścieżka managera** (manager i zarząd widzą obie).
   - **D1 Fundament**: kontrakt (aktualna wersja ze zwoju), system wynagrodzeń, prezentacja Czyste Powietrze → **Egzamin D1**.
-  - **D2 Skrypty i obiekcje**: R1, R2 (+ wersja słowna), banki obiekcji (D2D, przyjazd na audyt), sceny, scenariusze, filmy → **Egzamin D2 + scenka** (checklista managera, 14 ocen 1–5, decyzja „Gotowy do D3”).
+  - **D2 Skrypty i obiekcje**: R1, R2 (+ wersja słowna), banki obiekcji (D2D, przyjazd na audyt), sceny, scenariusze, filmy → **Egzamin D2 + scenka** (checklista managera, 14 ocen 1–5, decyzja „Gotowy do D3”; bez sztywnego progu — podpowiedź „zalecane min. 50/70 pkt”, decyzja managera).
   - **D3**: prospecting i wybór terenu + **Karta obserwacji D3** wypełniana przez managera w aplikacji.
-  - **D4**: **Karta obserwacji D4** (manager) z decyzją „Gotowy na samodzielność — start Ignition” (opcje decyzji do potwierdzenia).
-  - **Manager**: Podręcznik Managera (5 lekcji) → **Egzamin managerski**; **Launch Pad 90 dni** (szablon M1 Ignition / M2 Orbit / M3 Next Level, bez danych osobowych).
-- **Treści**: `docs/tresci/NLE_Onboarding_Komplet.md` (poprawiony wg SPEC — lista zmian `docs/tresci/KOREKTY.md`) → oczyszczone lekcje `src/content/akademia/*.md` → `npm run content`. Gdzie onboarding kłóci się ze SPEC — wygrywa SPEC. Maksymalne dofinansowanie zawsze 170 100 zł; audytor przed pomiarem NIE podaje klientowi żadnej kwoty (kwoty w egzaminach oznaczone „wiedza wewnętrzna — nie mówimy klientowi”).
+  - **D4**: **Karta obserwacji D4** (manager) z decyzją: „Gotowy na samodzielność — start Ignition” (zalicza etap) / „Potrzebuje jeszcze jednego dnia D4” / „Nie rokuje — rozmowa o zakończeniu współpracy”.
+  - **Manager**: Podręcznik Managera (5 lekcji) → **Egzamin managerski**; **Launch Pad 90 dni** (szablon M1 Ignition / M2 Orbit / M3 Next Level, bez danych osobowych; cel M1 = min. 5 pomiarów — próg Safety).
+- **Treści**: `docs/tresci/NLE_Onboarding_Komplet.md` (poprawiony wg SPEC — lista zmian `docs/tresci/KOREKTY.md`) → oczyszczone lekcje `src/content/akademia/*.md` → `npm run content`. Gdzie onboarding kłóci się ze SPEC — wygrywa SPEC. Maksymalne dofinansowanie zawsze 170 100 zł; audytor przed pomiarem NIE podaje klientowi żadnej kwoty ani procentu (kwoty w egzaminach oznaczone „wiedza wewnętrzna — nie mówimy klientowi”).
+- **Klucze zweryfikowane** (przełącznik per egzamin w Mennicy → Ustawienia). Klucze odtworzono z treści (PDF zgubił zaznaczenia) — lista do sprawdzenia: `docs/tresci/KLUCZE_DO_WERYFIKACJI.md`. Dopóki przełącznik wyłączony, egzamin jest **próbny**: wynik nie odblokowuje etapu, widoczny dopisek „egzamin próbny”.
 - **Egzaminy**: pytania zamknięte sprawdzane automatycznie na serwerze, otwarte ocenia manager (stan „czeka na ocenę”, punkty 0–max wg wzorca, komentarz). Próg punktowy = % z ustawień (D1 i D2 80%, managerski 70%) × maksimum. Po niezdanym — przerwa (ustawienie).
 - **BEZPIECZEŃSTWO**: klucze odpowiedzi nigdy nie trafiają do kodu wysyłanego na urządzenie — moduł `src/lib/academy/exams.ts` jest `server-only`, do przeglądarki idzie tylko wersja publiczna; test `academy-security` sprawdza graf importów plików „use client”, `npm run check:bundle` (w CI po buildzie) szuka znacznika kluczy w paczce przeglądarki. Po egzaminie osoba widzi, które pytania zamknięte były błędne — bez poprawnej odpowiedzi.
 - **Filmy (YouTube, niepubliczne)**: 02 → R1; 03 → bank D2D; 04–12 → R2 (6 tajemnic); 13 → bank przyjazd na audyt. Admin przypisuje linki (Mennica → Ustawienia). Własny odtwarzacz: bez kontrolek YouTube, bez „Obejrzyj na YouTube” i polecanych (nakładka + własny ekran końcowy), link niewidoczny, tylko po zalogowaniu, przewijanie do przodu tylko do obejrzanego miejsca. Lekcja zaliczona od **90%** obejrzanych sekund (ustawienie). Rejestr obejrzeń w panelu zespołu (docelowo w Wieży). Bez linku — atrapa (symulowany film).
@@ -81,13 +82,13 @@ To NIE jest prognoza zarobków.
 ## Kartki
 
 - **Żółta**: spóźnienie, brak raportu w CRM / aplikacji, brak GOPS, obietnica kwoty przed pomiarem, presja na kliencie, KPI < 30 pkt.
-- **Czerwona**: 3 spóźnienia, 2 nieobecności albo 2 żółte kartki (w oknie dni z ustawień — domyślnie 90, do potwierdzenia).
+- **Czerwona**: 3 spóźnienia, 2 nieobecności albo 2 żółte kartki (w oknie 90 dni — ustawienie).
 - Manager nadaje kartki w Wieży z uzasadnieniem; automatycznie: „brak raportu” (brak „Zamknij dzień” do terminu) i „KPI < 30” — najwyżej raz na dzień / okres. Historia w profilu osoby (Orbita).
 
 ## Audytor: Safety albo Next Level
 
-- **Safety** (miesięcznie wg pomiarów): 0–4 → 0 zł (umowa zlecenia: co najmniej stawka minimalna × godziny z aplikacji — do potwierdzenia z prawnikiem, stawka w ustawieniach); 5–9 → 3 750 zł + 200 zł za każdy pomiar ponad 5; 10–14 → 7 000 zł + 250 zł ponad 10; 15+ → 10 000 zł + 300 zł ponad 15. Bez bonusu za zamknięcie. Mnożnik KPI na całą wypłatę Safety (ustawienie, domyślnie włączone).
-- **Pomiar** = umowa audytowa, która doszła do „DOKUMENTACJA POMIAROWA” lub dalej (założenie). Safety za miesiąc wypłacamy w okresie z pierwszym dniem następnego miesiąca (jak flota) — założenie.
+- **Safety** (miesięcznie wg pomiarów): 0–4 → 0 zł (umowa zlecenia: co najmniej stawka minimalna × godziny z aplikacji — na 2026: 31,40 zł/h, w ustawieniach); 5–9 → 3 750 zł + 200 zł za każdy pomiar ponad 5; 10–14 → 7 000 zł + 250 zł ponad 10; 15+ → 10 000 zł + 300 zł ponad 15. Bez bonusu za zamknięcie. Mnożnik KPI na całą wypłatę Safety (ustawienie, domyślnie włączone).
+- **Pomiar** = pomiar po pozytywnej weryfikacji: umowa /A w „TWORZENIE OFERTY” lub dalej (ta sama chwila, co zielona prowizja audytora). Safety za miesiąc wypłacamy w okresie z pierwszym dniem następnego miesiąca (jak flota).
 - **Next Level**: tabela 10 poziomów. Awans działa od **następnej** umowy (umowa dająca awans płatna wg starej stawki) — tak samo u handlowców.
 - Wybór na starcie; zmiana tylko Safety → Next Level (decyzja managera, z powodem); wyjątek: czasowy powrót na Safety (choroba / wypadek). Pomiary na Safety liczą się do poziomu.
 - **Orbita**: aktywny system, pasek do progu („jeszcze 2 pomiary do 7 000 zł”), podgląd „ile zarobiłbyś na Next Level”. Udział w nadmarży mają tylko handlowcy.

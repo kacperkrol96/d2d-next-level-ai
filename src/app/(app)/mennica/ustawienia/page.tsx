@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, FileSignature, Palette, PlayCircle, ScrollText } from "lucide-react";
-import { academyVideos } from "@/lib/academy/content";
+import { ArrowLeft, FileSignature, KeyRound, Palette, PlayCircle, ScrollText } from "lucide-react";
+import { academyStages, academyVideos } from "@/lib/academy/content";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
 import type { ContractTrack } from "@/lib/contracts/types";
 import type { ContractScrollTheme } from "@/lib/config/types";
 import { getDataSource } from "@/lib/data";
 import { currentContract } from "@/lib/domain/contract";
-import { publishContract, setContractTheme, setVideoLink } from "./actions";
+import { publishContract, setContractTheme, setExamVerified, setVideoLink } from "./actions";
 
 const themes: { key: ContractScrollTheme; label: string; description: string }[] = [
   { key: "parchment", label: "Pergamin", description: "Zwój z drewnianymi wałkami i woskową pieczęcią" },
@@ -100,6 +100,47 @@ export default async function UstawieniaPage({ searchParams }: PageProps<"/menni
           </Card>
         );
       })}
+
+      <Card className="mb-4">
+        <div id="egzaminy" />
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <KeyRound size={16} className="text-accent-soft" /> Egzaminy — klucze zweryfikowane
+          </span>
+        </CardTitle>
+        <p className="mb-3 text-xs text-muted">
+          Klucze odpowiedzi odtworzono z materiałów (PDF zgubił zaznaczenia) — lista do sprawdzenia: docs/tresci/KLUCZE_DO_WERYFIKACJI.md. Dopóki przełącznik jest wyłączony,
+          egzamin działa w trybie próbnym: wynik nie odblokowuje etapu.
+        </p>
+        <ul className="flex flex-col gap-2">
+          {academyStages.flatMap((st) =>
+            st.gates.flatMap((g) => {
+              if (g.kind !== "exam") return [];
+              const on = config.academy.verifiedExams[g.examId] === true;
+              return [
+                <li key={g.examId}>
+                  <form action={setExamVerified} className="flex items-center justify-between gap-3 rounded-2xl bg-card-2 px-4 py-3">
+                    <input type="hidden" name="examId" value={g.examId} />
+                    <input type="hidden" name="on" value={on ? "0" : "1"} />
+                    <span className="text-sm">
+                      Egzamin {st.code} — {st.title}
+                      <span className={`ml-2 text-[11px] ${on ? "text-earned" : "text-gold"}`}>{on ? "zweryfikowane" : "tryb próbny"}</span>
+                    </span>
+                    <button
+                      role="switch"
+                      aria-checked={on}
+                      aria-label={`Klucze zweryfikowane: egzamin ${st.code}`}
+                      className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-earned" : "bg-white/15"}`}
+                    >
+                      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-6" : "left-1"}`} />
+                    </button>
+                  </form>
+                </li>,
+              ];
+            }),
+          )}
+        </ul>
+      </Card>
 
       <Card className="mb-4">
         <div id="filmy" />

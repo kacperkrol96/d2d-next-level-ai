@@ -71,7 +71,9 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - [x] Rytm pracy: cele dnia w Kokpicie, odprawy w Misjach, „Zamknij dzień” do 21:00, licznik nagrań
 - [x] Reguły terenu i leadów (logika + testy; ekrany w Etapach 5–6)
 - [x] Filmy YouTube: własny odtwarzacz, ≥90% obejrzane, przypisywanie linków przez admina, rejestr obejrzeń, atrapy
-- [ ] Do potwierdzenia przez Kacpra: lista pytań w podsumowaniu paczki (PR)
+- [x] Decyzje Kacpra: D4 z 3 opcjami, podpowiedź 50/70 w scence, R1 „kolejność” wg obecnego skryptu, Launch Pad M1 = 5 pomiarów, stawka 31,40 zł/h, pomiar od TWORZENIE OFERTY, bez procentów przed pomiarem, przywrócone adresy czystepowietrze.gov.pl
+- [x] Tryb próbny egzaminów do czasu weryfikacji kluczy (przełącznik per egzamin) + `docs/tresci/KLUCZE_DO_WERYFIKACJI.md`
+- [ ] Kacper: weryfikacja kluczy egzaminów i włączenie przełączników
 
 ## Etap 3 — Wieża + Konstelacja (z eskadrami)
 

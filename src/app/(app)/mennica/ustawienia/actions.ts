@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/auth/session";
 import type { ContractTrack } from "@/lib/contracts/types";
 import type { ContractScrollTheme } from "@/lib/config/types";
 import { getDataSource } from "@/lib/data";
-import { academyVideos } from "@/lib/academy/content";
+import { academyStages, academyVideos } from "@/lib/academy/content";
 import { nextContractVersion } from "@/lib/domain/contract";
 import { youtubeIdFrom } from "@/lib/domain/youtube";
 
@@ -50,4 +50,18 @@ export async function setVideoLink(formData: FormData) {
   await getDataSource().setVideoLink(key, id);
   revalidatePath("/", "layout");
   redirect(`/mennica/ustawienia?ok=${encodeURIComponent(id ? `Film ${key} przypisany` : `Film ${key}: przywrócono atrapę`)}#filmy`);
+}
+
+/** „Klucze zweryfikowane” per egzamin — dopóki wyłączone, egzamin działa w trybie próbnym. */
+export async function setExamVerified(formData: FormData) {
+  await requireRole(["admin"]);
+  const examId = String(formData.get("examId") ?? "");
+  const on = formData.get("on") === "1";
+  const ids = academyStages.flatMap((s) => s.gates.flatMap((g) => (g.kind === "exam" ? [g.examId] : [])));
+  if (!ids.includes(examId)) return;
+  const source = getDataSource();
+  const { academy } = await source.getConfig();
+  await source.updateConfig({ academy: { ...academy, verifiedExams: { ...academy.verifiedExams, [examId]: on } } });
+  revalidatePath("/", "layout");
+  redirect(`/mennica/ustawienia?ok=${encodeURIComponent(on ? `Egzamin ${examId.toUpperCase()}: klucze zweryfikowane` : `Egzamin ${examId.toUpperCase()}: tryb próbny`)}#egzaminy`);
 }

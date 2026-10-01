@@ -203,7 +203,10 @@ export const seedConfig: AppConfig = {
   // Data włączenia reguły ustawi admin (2 tygodnie po starcie pilota).
   appLeadRule: { enforceFrom: null },
 
-  academy: { passThreshold: 0.8, examPassThresholds: { d1: 0.8, d2: 0.8, manager: 0.7 }, retryCooldownMinutes: 30, requireLessonsBeforeExam: true, videoWatchedShare: 0.9 },
+  academy: { passThreshold: 0.8, examPassThresholds: { d1: 0.8, d2: 0.8, manager: 0.7 },
+    // Klucze odtworzone z treści (PDF zgubił zaznaczenia) — do weryfikacji: docs/tresci/KLUCZE_DO_WERYFIKACJI.md
+    verifiedExams: { d1: false, d2: false, manager: false },
+    scenkaRecommendedMin: 50, retryCooldownMinutes: 30, requireLessonsBeforeExam: true, videoWatchedShare: 0.9 },
 
   safety: {
     tiers: [
@@ -212,8 +215,8 @@ export const seedConfig: AppConfig = {
       { minMeasurements: 10, base: 7000, perExtra: 250 },
       { minMeasurements: 15, base: 10000, perExtra: 300 },
     ],
-    // Stawka minimalna godzinowa (umowa zlecenia) — wartość do uzupełnienia przez admina, do potwierdzenia z prawnikiem.
-    minHourlyRate: 30.5,
+    // Minimalna stawka godzinowa (umowa zlecenia) na 2026 — decyzja Kacpra.
+    minHourlyRate: 31.4,
     applyKpiMultiplier: true,
   },
 

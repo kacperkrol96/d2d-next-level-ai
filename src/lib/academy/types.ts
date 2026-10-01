@@ -75,6 +75,8 @@ export interface PublicExam {
   timeLimitMinutes: number | null;
   maxPoints: number;
   passPoints: number;
+  /** Tryb próbny — klucze niezweryfikowane. */
+  trial: boolean;
   questions: PublicQuestion[];
 }
 
@@ -92,6 +94,8 @@ export interface ExamAttempt {
   /** Suma punktów (null = czeka na ocenę managera). */
   points: number | null;
   passed: boolean | null;
+  /** Egzamin próbny (klucze niezweryfikowane) — wynik nie odblokowuje etapu. */
+  trial?: boolean;
 }
 
 /** Karta wypełniona przez managera (scenki D2, obserwacje D3/D4). */

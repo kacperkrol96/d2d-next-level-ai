@@ -89,7 +89,7 @@ To materiał do scenek. Jedna osoba gra klienta i rzuca obiekcję, druga (audyto
 **Klient:** Sąsiad mówił, że takie firmy to oszustwo.
 
 1. **Przyjmij:** Rozumiem — i sąsiad ma rację, że na rynku są nieuczciwe firmy.
-2. **Obróć:** Dlatego warto sprawdzić, z kim się rozmawia — my działamy z OC, a program rządowy można zweryfikować na oficjalnej rządowej stronie programu Czyste Powietrze.
+2. **Obróć:** Dlatego warto sprawdzić, z kim się rozmawia — my działamy z OC, a program rządowy można zweryfikować na czystepowietrze.gov.pl.
 3. **Wróć:** Sama weryfikacja nic nie kosztuje i do niczego nie zobowiązuje. Trzynasta czy siedemnasta?
 
 > Nie obrażaj się na sąsiada. Przyznaj rację, potem zbuduj wiarygodność faktem (OC, strona rządowa).
@@ -99,7 +99,7 @@ To materiał do scenek. Jedna osoba gra klienta i rzuca obiekcję, druga (audyto
 **Klient:** Ja w żadne dotacje nie wierzę, to wszystko ściema.
 
 1. **Przyjmij:** Rozumiem ten sceptycyzm — dużo się naobiecywało ludziom.
-2. **Obróć:** Dlatego nie proszę, żeby Pan mi wierzył — program jest rządowy, do sprawdzenia na oficjalnej rządowej stronie programu Czyste Powietrze, a ja tylko weryfikuję fakty.
+2. **Obróć:** Dlatego nie proszę, żeby Pan mi wierzył — program jest rządowy, do sprawdzenia na czystepowietrze.gov.pl, a ja tylko weryfikuję fakty.
 3. **Wróć:** Niech liczą się fakty, nie obietnice. Umówmy sprawdzenie: trzynasta czy siedemnasta?
 
 > Sceptyka nie przekonasz emocją — tylko faktem i możliwością samodzielnej weryfikacji. Spokój i konkret.

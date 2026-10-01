@@ -5,12 +5,12 @@ import { LessonIcon, lessonKindLabel } from "@/components/academy/LessonIcon";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { requireUser } from "@/lib/auth/session";
 import type { GateStatus } from "@/lib/domain/academy";
-import { getStage } from "@/lib/services/academy";
+import { getStage, type StageView } from "@/lib/services/academy";
 
 const timeFmt = new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Warsaw" });
 const dateFmt = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "short", timeZone: "Europe/Warsaw" });
 
-function GateCard({ g, stageId, exam }: { g: GateStatus; stageId: string; exam?: { title: string; maxPoints: number; passPoints: number } }) {
+function GateCard({ g, stageId, exam }: { g: GateStatus; stageId: string; exam?: StageView["exams"][string] }) {
   const passed = g.state === "passed";
   if (g.gate.kind === "exam") {
     const last = g.lastAttempt;
@@ -22,7 +22,10 @@ function GateCard({ g, stageId, exam }: { g: GateStatus; stageId: string; exam?:
               {passed ? <Check size={20} /> : <GraduationCap size={20} />}
             </span>
             <div>
-              <div className="font-medium">{exam?.title ?? "Egzamin"}</div>
+              <div className="font-medium">
+                {exam?.title ?? "Egzamin"}
+                {exam?.trial && <span className="ml-2 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] text-gold">egzamin próbny</span>}
+              </div>
               <div className="text-xs text-muted">
                 próg {exam?.passPoints}/{exam?.maxPoints} pkt · pytania zamknięte sprawdza aplikacja, otwarte — manager
                 {g.bestPoints !== null && <> · najlepszy wynik {g.bestPoints} pkt</>}
@@ -46,6 +49,13 @@ function GateCard({ g, stageId, exam }: { g: GateStatus; stageId: string; exam?:
             </span>
           )}
         </div>
+        {exam?.trial && (
+          <p className="mt-3 text-xs text-gold/90">
+            Tryb próbny: wynik nie odblokowuje etapu, dopóki Zarząd nie zweryfikuje kluczy odpowiedzi.
+            {exam.lastTrial && exam.lastTrial.points !== null && ` Ostatnia próba: ${exam.lastTrial.points} pkt.`}
+            {exam.lastTrial && exam.lastTrial.passed === null && " Ostatnia próba czeka na ocenę managera."}
+          </p>
+        )}
         {last?.review?.comment && <p className="mt-3 rounded-2xl bg-card-2 px-4 py-3 text-sm text-white/85">Komentarz managera: {last.review.comment}</p>}
       </Card>
     );

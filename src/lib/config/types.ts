@@ -201,6 +201,13 @@ export interface AcademyRules {
   passThreshold: number;
   /** Próg dla konkretnego egzaminu (id egzaminu → 0–1), np. managerski 70%. */
   examPassThresholds: Record<string, number>;
+  /**
+   * „Klucze zweryfikowane” per egzamin. Dopóki false — egzamin działa w trybie próbnym
+   * (wynik nie odblokowuje etapu, dopisek „egzamin próbny”).
+   */
+  verifiedExams: Record<string, boolean>;
+  /** Scenka D2: zalecane minimum punktów (podpowiedź dla managera, decyzja należy do niego). */
+  scenkaRecommendedMin: number;
   /** Lekcja filmowa zaliczona po obejrzeniu takiej części filmu (0–1). */
   videoWatchedShare: number;
   /** Ile minut odczekać przed kolejnym podejściem po niezdanym egzaminie (0 = od razu). */

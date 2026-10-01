@@ -235,10 +235,17 @@ Tekst w dokumencie zostaje bez polskich znaków tam, gdzie był bez nich (konwer
 
 ## Czego NIE zmieniono (świadomie) — do decyzji Kacpra
 
-1. **Procent dofinansowania w R2** („plasują się Państwo na poziomie [X] procent”) — zostawiony z dopiskiem „wstępnie”. To nie jest kwota, ale decyzja D5 mówi, że próg dochodowy przed pomiarem nie jest znany. Jeśli audytor ma też nie mówić procentu — trzeba przebudować Tajemnicę Ekonomiczną (liczenie z klientem na kartce).
+1. **Procent dofinansowania w R2** — ROZSTRZYGNIĘTE (Kacper): przed pomiarem audytor nie podaje ani kwot, ani procentów; zdania z „[X] procent” usunięte (R2 i wersja słowna). To nie jest kwota, ale decyzja D5 mówi, że próg dochodowy przed pomiarem nie jest znany. Jeśli audytor ma też nie mówić procentu — trzeba przebudować Tajemnicę Ekonomiczną (liczenie z klientem na kartce).
 2. **Safety 0–4 pomiary = 0 zł a cele Launch Pad M1 = 4 pomiary** (Julia, Jarek) — po zmianie audytor Safety, który zrobi plan na M1, zarobi 0 zł (poza minimalną stawką przy zleceniu). Warto podnieść cel M1 do 5 pomiarów albo zmienić próg.
 3. **Wybór rejonu** — kontrakt i przewodniki mówiły „audytor sam wybiera rejon”, SPEC mówi „rejon od managera” (Terytorium/Wieża). Wstawiono pointer do SPEC.md; Launch Pady („Samodzielny wybor rejonow bez [managera]”) zostały bez zmian — do potwierdzenia, czy chodzi o planowanie ulic w rejonie od managera.
 4. **„3 KPI uproszczone” w Ignition i „wyższe progi” w M3** — oznaczone jako nieaktualne; SPEC nie przewiduje osobnych KPI dla nowych osób.
 5. **Kwoty orientacyjne 66 / 99 / 135 tys. zł** dla progów (slajd 3) — zostawione jako wiedza wewnętrzna; nie weryfikowano ich z aktualnym regulaminem programu.
 6. **„Do niczego nie zobowiązuje”** w Banku obiekcji — zostawione (dotyczy audytu, a zakaz z kontraktu dotyczy pomiaru „niezobowiązującego”); do ujednolicenia językowego.
 7. **Czas procesu „dwa tygodnie”** (R2, Bank obiekcji) — dotyczy procesu klienta, nie rozliczeń; bez zmian.
+
+
+## Decyzje Kacpra po paczce zbiorczej
+
+- Przed pomiarem audytor nie podaje klientowi ani kwot, ani procentów — usunięto „[X] procent” z R2 i R2 słownej.
+- Adresy oficjalnych stron (czystepowietrze.gov.pl) przywrócone w lekcjach.
+- Launch Pad: cel M1 podniesiony z 4 do 5 pomiarów (próg Safety).

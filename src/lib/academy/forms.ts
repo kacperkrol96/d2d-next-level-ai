@@ -1023,7 +1023,8 @@ export const forms: FormDef[] = [
     "decision": {
       "options": [
         "Gotowy na samodzielność — start Ignition",
-        "Potrzebuje jeszcze jednego dnia D4"
+        "Potrzebuje jeszcze jednego dnia D4",
+        "Nie rokuje — rozmowa o zakończeniu współpracy"
       ],
       "pass": "Gotowy na samodzielność — start Ignition"
     }
@@ -1182,7 +1183,7 @@ export const launchPad = {
       "name": "Ignition",
       "days": "1–30",
       "managerCadence": "Weekly 1:1 (styl S1 dyrektywny); codzienna kontrola CRM nowego",
-      "minMeasurements": 4,
+      "minMeasurements": 5,
       "habits": [
         "12 leadów dziennie — bez wyjątków",
         "Sołtys jako krok zerowy w każdym rejonie",

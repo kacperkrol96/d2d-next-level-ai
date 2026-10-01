@@ -288,13 +288,13 @@ export function auditorEntries(employeeId: string, ctx: PortfolioContext, timeli
 }
 
 /**
- * Pomiary audytora (Safety): audyt, który doszedł do „DOKUMENTACJA POMIAROWA” lub dalej
- * (kategoria szara albo zielona audytora) — z datą wejścia.
+ * Pomiary audytora (Safety): pomiar po pozytywnej weryfikacji — umowa /A w „TWORZENIE OFERTY” lub dalej
+ * (ta sama chwila, co zielona prowizja audytora) — z datą wejścia.
  */
 export function auditorMeasurements(employeeId: string, ctx: PortfolioContext): { clientId: string; at: Date }[] {
   return ctx.clients
     .filter((rc) => rc.auditorId === employeeId && rc.auditAgreement && !isBlocked(rc, "auditor"))
-    .map((rc) => ({ clientId: rc.client.id, at: reachedCategoryAt(rc.auditAgreement!.agreement, ["auditor_grey", "auditor_earned"], ctx.config.crm) }))
+    .map((rc) => ({ clientId: rc.client.id, at: reachedCategoryAt(rc.auditAgreement!.agreement, ["auditor_earned"], ctx.config.crm) }))
     .filter((m): m is { clientId: string; at: Date } => m.at !== null);
 }
 

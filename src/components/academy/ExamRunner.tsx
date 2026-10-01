@@ -36,7 +36,7 @@ export function ExamRunner({ stageId, exam, backHref }: { stageId: string; exam:
       const res = await sendExam(stageId, answers);
       if ("error" in res) return setError(res.error);
       setOutcome(res);
-      if (res.state === "passed" && (res.unlocked || res.trackCompleted)) setCelebrate(true);
+      if (res.state === "passed" && !res.trial && (res.unlocked || res.trackCompleted)) setCelebrate(true);
     });
 
   if (outcome) {
@@ -61,6 +61,9 @@ export function ExamRunner({ stageId, exam, backHref }: { stageId: string; exam:
             Próg zaliczenia: {pts(outcome.passPoints)} z {pts(outcome.maxPoints)}
             {review && " — odpowiedzi otwarte oceni manager"}
           </div>
+          {outcome.trial && (
+            <div className="mt-3 rounded-2xl bg-gold/10 px-4 py-2 text-xs text-gold">Egzamin próbny — wynik nie odblokowuje etapu (klucze odpowiedzi czekają na weryfikację).</div>
+          )}
           {outcome.unlocked && <div className="mt-2 text-sm text-gold">Odblokowany etap: {outcome.unlocked.title}</div>}
         </div>
         {outcome.wrong.length > 0 && (
@@ -94,6 +97,9 @@ export function ExamRunner({ stageId, exam, backHref }: { stageId: string; exam:
         ))}
       </div>
 
+      {exam.trial && (
+        <p className="mb-4 rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-xs text-gold">Egzamin próbny — wynik nie odblokowuje etapu, dopóki Zarząd nie zweryfikuje kluczy odpowiedzi.</p>
+      )}
       {index === 0 && <p className="mb-4 rounded-2xl bg-card-2 px-4 py-3 text-xs text-muted">{exam.instructions}</p>}
 
       <AnimatePresence mode="wait">

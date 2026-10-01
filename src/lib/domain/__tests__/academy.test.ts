@@ -210,3 +210,36 @@ describe("treści lekcji zsynchronizowane z plikami .md", () => {
     }
   });
 });
+
+describe("klucze niezweryfikowane = egzamin próbny", () => {
+  const verified = { ...rules, verifiedExams: { t: true } };
+  const trialRules = { ...rules, verifiedExams: {} };
+  const stages = [stage("s1", 1, [{ kind: "exam", examId: "co" }], 0), stage("s2", 2, [], 1)];
+
+  it("domyślnie wszystkie egzaminy są w trybie próbnym", () => {
+    expect(Object.values(config.academy.verifiedExams).every((v) => v === false)).toBe(true);
+    expect(toPublicExam(exam, rules).trial).toBe(true);
+    expect(toPublicExam(exam, verified).trial).toBe(false);
+  });
+
+  it("zdany egzamin próbny nie odblokowuje etapu i nie blokuje kolejnej próby", () => {
+    const a = newAttempt(closedOnly, "s1", { c1: 1, c2: 0 }, trialRules, now, "x");
+    expect(a).toMatchObject({ passed: true, trial: true });
+    const st = stageStatuses(stages, progress({ attempts: [a] }), trialRules, now);
+    expect(st.map((s) => s.state)).toEqual(["available", "locked"]);
+    expect(st[0].gates[0].state).toBe("open");
+  });
+
+  it("po weryfikacji kluczy zdany egzamin odblokowuje kolejny etap", () => {
+    const a = newAttempt(closedOnly, "s1", { c1: 1, c2: 0 }, { ...rules, verifiedExams: { co: true } }, now, "x");
+    expect(a.trial).toBeUndefined();
+    expect(stageStatuses(stages, progress({ attempts: [a] }), rules, now).map((s) => s.state)).toEqual(["passed", "available"]);
+  });
+
+  it("zadanie „kolejność kroków R1” zgodne z obecnym skryptem (zaczyna się od „Postawa”)", async () => {
+    const { exams } = await import("@/lib/academy/exams");
+    const q = exams.find((e) => e.id === "d2")!.questions.find((x) => x.id === "d2-q9")!;
+    expect(q.correctOrder!.map((i) => q.items![i])[0]).toMatch(/^Postawa/);
+    expect(q.correctOrder!.map((i) => q.items![i]).at(-1)).toMatch(/^Domknięcie/);
+  });
+});

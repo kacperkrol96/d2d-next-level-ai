@@ -2,7 +2,7 @@ _Scenariusz prowadzenia prezentacji Czyste Powietrze — Dzień 1_
 
 **9 slajdów · 45–60 minut · z ćwiczeniami**
 
-Ten dokument prowadzi prowadzącego (managera) slajd po slajdzie. Przy każdym slajdzie masz: co mówisz na żywo (**Prowadzący mówi**), na co zwrócić uwagę i gdzie się zatrzymać (noty). Slajdy są przygotowane wcześniej — Ty je tylko prowadzisz. Liczby CP są aktualne na 2026; przed każdą nową grupą sprawdź aktualne dane na oficjalnej stronie programu Czyste Powietrze.
+Ten dokument prowadzi prowadzącego (managera) slajd po slajdzie. Przy każdym slajdzie masz: co mówisz na żywo (**Prowadzący mówi**), na co zwrócić uwagę i gdzie się zatrzymać (noty). Slajdy są przygotowane wcześniej — Ty je tylko prowadzisz. Liczby CP są aktualne na 2026; przed każdą nową grupą sprawdź aktualne dane na czystepowietrze.gov.pl.
 
 ## Slajd 1 — Czym jest program Czyste Powietrze
 

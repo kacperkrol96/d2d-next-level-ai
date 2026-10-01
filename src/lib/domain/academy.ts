@@ -19,6 +19,11 @@ export function passPoints(exam: ExamDef, rules: AcademyRules): number {
   return Math.ceil(maxPoints(exam) * share - EPS);
 }
 
+/** Egzamin próbny, dopóki admin nie oznaczy kluczy jako zweryfikowanych. */
+export function isTrial(exam: ExamDef, rules: AcademyRules): boolean {
+  return rules.verifiedExams[exam.id] !== true;
+}
+
 /** Czy egzamin ma punktowane pytania otwarte (wtedy wynik ustala manager). */
 export function needsReview(exam: ExamDef): boolean {
   return exam.questions.some((q) => q.type === "text" && q.points > 0);
@@ -33,6 +38,7 @@ export function toPublicExam(exam: ExamDef, rules: AcademyRules): PublicExam {
     timeLimitMinutes: exam.timeLimitMinutes,
     maxPoints: maxPoints(exam),
     passPoints: passPoints(exam, rules),
+    trial: isTrial(exam, rules),
     questions: exam.questions.map((q) => ({ id: q.id, type: q.type, text: q.text, points: q.points, options: q.options, items: q.items })),
   };
 }
@@ -74,6 +80,7 @@ export function newAttempt(exam: ExamDef, stageId: string, answers: Record<strin
     review: null,
     points: review ? null : autoPoints,
     passed: review ? null : autoPoints >= passPoints(exam, rules) - EPS,
+    ...(isTrial(exam, rules) ? { trial: true } : {}),
   };
 }
 
@@ -165,7 +172,8 @@ function gateStatus(gate: Gate, stage: AcademyStage, progress: AcademyProgress, 
     const ok = gate.passDecision === null || last.decision === gate.passDecision;
     return { ...base, lastForm: last, state: ok ? "passed" : "needs_more" };
   }
-  const attempts = progress.attempts.filter((a) => a.examId === gate.examId && a.stageId === stage.id);
+  // Podejścia próbne (klucze niezweryfikowane) nie odblokowują etapu i nie blokują kolejnych prób.
+  const attempts = progress.attempts.filter((a) => a.examId === gate.examId && a.stageId === stage.id && !a.trial);
   const last = latest(attempts);
   const scored = attempts.map((a) => a.points).filter((p): p is number => p !== null);
   const common = { ...base, lastAttempt: last, bestPoints: scored.length ? Math.max(...scored) : null };

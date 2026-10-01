@@ -1276,7 +1276,7 @@ Powyzej
 
 **[AUDYTOR]**
 
-Wstepnie, na podstawie dochodow, plasuja sie Panstwo na poziomie [X] procent. Wysokosc
+Wysokosc
 dofinansowania poznamy po pomiarze — zalezy od progu dochodowego. Ale — i tu jest haczyk.
 
 ZASADA
@@ -1445,7 +1445,7 @@ Czy jest ktos kto tu faktycznie mieszka ale nie jest zameldowany? Program liczy 
 A laczne dochody miesiecznie wszystkich razem — emerytury, renty, pensje — mniej wiecej ile to jest?
 Dzielisz na kartce: kwota : liczba osob = wynik zl/os. Zakreslasz prog.
 
-Dobra wiadomosc — wstepnie dochody Panstwa kwalifikuja sie do poziomu [X] procent dofinansowania. Wysokosc
+Dobra wiadomosc — Panstwa sytuacja pasuje do programu. Wysokosc
 dofinansowania poznamy po pomiarze — zalezy od progu dochodowego.
 Ale — i tu jest haczyk.
 To jest dopiero jeden element ukladanki. Zeby program przyjal wniosek, musza byc spelnione jeszcze kryteria techniczne
@@ -4023,7 +4023,7 @@ Bramka do Ignition.
 
 MANAGER W LAUNCH PAD AUDYTORA (90 DNI)
 > IGNITION (M1) — Weekly 1:1 (styl S1 dyrektywny). Codzienna kontrola CRM nowego. Re-test CP w dniu 14. Pilnuje
-min. 4 pomiarow.
+min. 5 pomiarow.
 
 > ORBIT (M2) — Bi-weekly 1:1 (styl S2/S3 wspierajacy). Peer coaching. Przeglad KPI co okres rozliczeniowy (1-15, 16-koniec miesiaca). Pilnuje min. 6 pomiarow i
 100% wynagrodzenia.
@@ -5961,7 +5961,7 @@ Animacja z narracja
 CO POKAZAC
 IGNITION
 
-Dzien 1-30, KPI wg SPEC.md (5 KPI — "3 KPI uproszczone" nieaktualne, do potwierdzenia), min. 4 pomiary, weekly 1:1, re-test CP D14.
+Dzien 1-30, KPI wg SPEC.md (5 KPI — "3 KPI uproszczone" nieaktualne, do potwierdzenia), min. 5 pomiarow, weekly 1:1, re-test CP D14.
 
 ORBIT
 

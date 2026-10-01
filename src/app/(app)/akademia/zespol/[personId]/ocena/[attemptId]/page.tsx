@@ -24,6 +24,7 @@ export default async function OcenaPage(props: PageProps<"/akademia/zespol/[pers
         <ArrowLeft size={14} /> Zespół
       </Link>
       <h1 className="num text-2xl font-semibold">{exam.title}</h1>
+      {attempt.trial && <p className="mt-2 text-xs text-gold">Egzamin próbny — ocena nie odblokuje etapu (klucze niezweryfikowane).</p>}
       <p className="mt-1 text-sm text-muted">
         {person.name} · pytania zamknięte: <span className="num text-white">{pts(attempt.autoPoints)} pkt</span> · próg {data.passPoints}/{data.maxPoints} pkt
       </p>

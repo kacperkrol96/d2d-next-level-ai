@@ -287,26 +287,26 @@ export const exams: ExamDef[] = [
       {
         "id": "d2-q9",
         "type": "text",
-        "text": "Skrypt R1 — pukanie D2D: ponumeruj kroki we właściwej kolejności.",
+        "text": "Skrypt R1 — pukanie D2D: ułóż 6 kroków we właściwej kolejności (krok „nie jest właścicielem” pomijamy — jest tylko wtedy, gdy potrzebny).",
         "points": 3,
         "options": null,
         "items": [
-          "Sołtys — przedstawienie się przed pierwszym domem",
-          "Icebreaker — jeden komentarz do otoczenia klienta",
-          "Domknięcie pozornym wyborem + dane + RODO + karteczka",
-          "Kwalifikacja — 4 pytania bez pauzy między nimi",
-          "Kwalifikacja pozytywna + HAK („spełniali jedne z kryteriów…”)",
-          "Przedstawienie Funduszu Remontowego — kim jestem i dlaczego tu jestem"
+          "Kwalifikacja — trzy proste pytania",
+          "Postawa i pierwsze wrażenie (pierwsze 3 sekundy)",
+          "Domknięcie — pozorny wybór, dane, zgoda RODO w aplikacji, potwierdzenie SMS/e-mail",
+          "Icebreaker — zanim powiesz, kim jesteś",
+          "Kwalifikacja pozytywna + hak",
+          "Kim jestem i dlaczego tu jestem"
         ],
         "correctIndex": null,
-        "modelAnswer": "1. Sołtys; 2. Icebreaker; 3. Przedstawienie Funduszu Remontowego; 4. Kwalifikacja; 5. Kwalifikacja pozytywna + HAK; 6. Domknięcie pozornym wyborem + dane + RODO + karteczka.",
+        "modelAnswer": "B, D, F, A, E, C — Postawa → Icebreaker → Kim jestem → 3 pytania kwalifikacyjne → Kwalifikacja pozytywna + hak → Domknięcie (pozorny wybór, dane, RODO, potwierdzenie).",
         "correctOrder": [
           1,
-          2,
-          6,
-          4,
+          3,
           5,
-          3
+          0,
+          4,
+          2
         ]
       },
       {
