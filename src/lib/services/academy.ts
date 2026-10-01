@@ -228,11 +228,11 @@ export async function submitExam(user: AppUser, stageId: string, rawAnswers: Rec
 
 // ------------------------------------------------------------------ manager: zespół, oceny, karty
 
-/** Osoby, których Akademię prowadzi użytkownik: manager — swój zespół (z CRM), zarząd — wszyscy. */
+/** Osoby prowadzone przez użytkownika: manager / handlowiec z audytorami — swoja struktura (z CRM), zarząd — wszyscy. */
 export async function teamOf(user: AppUser): Promise<AppUser[]> {
   const users = (await getDataSource().listUsers()).filter((u) => u.track && u.id !== user.id);
   if (user.role === "admin") return users;
-  if (user.role !== "manager" || !user.crmEmployeeId) return [];
+  if ((user.role !== "manager" && user.role !== "sales") || !user.crmEmployeeId) return [];
   const ctx = await loadContext();
   const ids = new Set([...subordinatesOf(user.crmEmployeeId, ctx.employees, "sales"), ...subordinatesOf(user.crmEmployeeId, ctx.employees, "auditor")].map((e) => e.id));
   return users.filter((u) => u.crmEmployeeId && ids.has(u.crmEmployeeId));

@@ -251,4 +251,6 @@ export const seedConfig: AppConfig = {
   field: { areaCooldownDays: 30, areaCooldownMode: "warning", maxQualifyingQuestions: 3, maxRebuttalsPerObjection: 3 },
 
   contractScrollTheme: "parchment",
+
+  reviews: { requiredStars: 5, fileRetentionDays: 90 },
 };

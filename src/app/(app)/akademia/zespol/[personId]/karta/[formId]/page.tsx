@@ -10,7 +10,7 @@ import { sendForm } from "../../../../actions";
 
 /** Karta managera: scenka D2 (oceny 1–5 + decyzja), obserwacja D3, obserwacja D4 (+ decyzja). */
 export default async function KartaPage(props: PageProps<"/akademia/zespol/[personId]/karta/[formId]">) {
-  const user = await requireRole(["manager", "admin"]);
+  const user = await requireRole(["sales", "manager", "admin"]);
   const { personId, formId } = await props.params;
   const { blad } = await props.searchParams;
   const [person, form] = [await canCoach(user, personId), formById(formId)];

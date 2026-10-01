@@ -8,6 +8,7 @@ import type { ContractScrollTheme } from "@/lib/config/types";
 import { getDataSource } from "@/lib/data";
 import { academyStages, academyVideos } from "@/lib/academy/content";
 import { nextContractVersion } from "@/lib/domain/contract";
+import { toggleSquadron } from "@/lib/domain/squadron";
 import { youtubeIdFrom } from "@/lib/domain/youtube";
 
 const THEMES: ContractScrollTheme[] = ["parchment", "cyberpunk", "retro"];
@@ -64,4 +65,17 @@ export async function setExamVerified(formData: FormData) {
   await source.updateConfig({ academy: { ...academy, verifiedExams: { ...academy.verifiedExams, [examId]: on } } });
   revalidatePath("/", "layout");
   redirect(`/mennica/ustawienia?ok=${encodeURIComponent(on ? `Egzamin ${examId.toUpperCase()}: klucze zweryfikowane` : `Egzamin ${examId.toUpperCase()}: tryb próbny`)}#egzaminy`);
+}
+
+/** Eskadra: przełącznik admina (historia zostaje po wyłączeniu). */
+export async function setSquadronActive(formData: FormData) {
+  const admin = await requireRole(["admin"]);
+  const id = String(formData.get("id") ?? "");
+  const on = formData.get("on") === "1";
+  const source = getDataSource();
+  const sq = (await source.squadrons()).find((s) => s.id === id);
+  if (!sq) return;
+  await source.saveSquadron(toggleSquadron(sq, on, admin.id, new Date()));
+  revalidatePath("/", "layout");
+  redirect(`/mennica/ustawienia?ok=${encodeURIComponent(`${sq.name}: ${on ? "włączona" : "wyłączona (historia zostaje)"}`)}#eskadry`);
 }

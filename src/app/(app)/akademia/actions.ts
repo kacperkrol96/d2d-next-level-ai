@@ -26,7 +26,7 @@ export async function sendExam(stageId: string, answers: Record<string, number |
 }
 
 export async function sendReview(formData: FormData) {
-  const user = await requireRole(["manager", "admin"]);
+  const user = await requireRole(["sales", "manager", "admin"]);
   const personId = String(formData.get("personId") ?? "");
   const attemptId = String(formData.get("attemptId") ?? "");
   const points: Record<string, number> = {};
@@ -38,7 +38,7 @@ export async function sendReview(formData: FormData) {
 }
 
 export async function sendForm(formData: FormData) {
-  const user = await requireRole(["manager", "admin"]);
+  const user = await requireRole(["sales", "manager", "admin"]);
   const personId = String(formData.get("personId") ?? "");
   const formId = String(formData.get("formId") ?? "");
   const values: Record<string, string> = {};

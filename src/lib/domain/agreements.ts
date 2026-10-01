@@ -1,6 +1,7 @@
 import type { AgreementScope, AppConfig, CrmRules, InitialsCode, ScopeCode, StatusCategory } from "@/lib/config/types";
 import type { ClientTerms, LeadRuleException, SalesAttribution } from "@/lib/data/types";
 import { localDay } from "./settlement";
+import { squadronFor, type Squadron } from "./squadron";
 import type { CrmAgreement, CrmClient, CrmEmployee, CrmStatusChange } from "@/lib/crm/types";
 
 /**
@@ -161,6 +162,8 @@ export interface ResolvedClient {
   auditAgreement: ResolvedAgreement | null;
   leadRule: LeadRuleState;
   issues: Issue[];
+  /** Klient eskadry (zewnętrzna grupa) — rozliczany wg pakietu zasad eskadry, nie handlowca. */
+  squadronId: string | null;
 }
 
 export interface AppClientInputs {
@@ -168,6 +171,8 @@ export interface AppClientInputs {
   attributions: readonly SalesAttribution[];
   leadExceptions: readonly LeadRuleException[];
   now: Date;
+  /** Eskadry — klient z prefiksem eskadry aktywnej przy podpisaniu umowy nie trafia do „Do wyjaśnienia”. */
+  squadrons?: readonly Squadron[];
 }
 
 const blocksFor = (scope: AgreementScope | null): ("sales" | "auditor")[] =>
@@ -263,7 +268,14 @@ export function resolveClient(
       issue("sales_conflict", salesAgreements[0]?.agreement ?? null, ["sales"], `Źródła wskazują różnych handlowców: ${who}`);
     }
   }
+  let squadronId: string | null = null;
   if (!salesId && salesAgreements.length > 0 && !issues.some((i) => i.kind === "sales_conflict")) {
+    const first = salesAgreements[0].agreement;
+    const signedAt = sortedHistory(first.statusHistory)[0]?.at;
+    const squadron = signedAt ? squadronFor(parseAgreementNumber(first.number, rules).initials, app.squadrons ?? [], new Date(signedAt)) : null;
+    if (squadron) squadronId = squadron.id;
+  }
+  if (!salesId && !squadronId && salesAgreements.length > 0 && !issues.some((i) => i.kind === "sales_conflict")) {
     const first = salesAgreements[0].agreement;
     const suggestion = suggestFromInitials(parseAgreementNumber(first.number, rules).initials, rules);
     issue(
@@ -311,7 +323,7 @@ export function resolveClient(
   );
   if (leadRule === "blocked") issue("no_app_lead", salesAgreements[0]?.agreement ?? null, ["sales"], "Klient nie ma leadu w aplikacji sprzed umowy — prowizja i awans wstrzymane (wyjątek zatwierdza manager)");
 
-  return { client, terms, salesId, salesSource, auditorId, agreements: resolved, salesAgreements, auditAgreement, leadRule, issues };
+  return { client, terms, salesId, salesSource, auditorId, agreements: resolved, salesAgreements, auditAgreement, leadRule, issues, squadronId };
 }
 
 export function isBlocked(client: ResolvedClient, role: "sales" | "auditor"): boolean {
