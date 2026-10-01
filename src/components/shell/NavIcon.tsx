@@ -9,6 +9,7 @@ import {
   Map,
   Orbit,
   Radar,
+  Sparkles,
   type LucideProps,
 } from "lucide-react";
 import type { PanelKey } from "@/lib/nav";
@@ -23,6 +24,7 @@ const icons: Record<PanelKey, React.ComponentType<LucideProps>> = {
   akademia: GraduationCap,
   konfigurator: Calculator,
   wieza: Castle,
+  konstelacja: Sparkles,
   mennica: Landmark,
 };
 

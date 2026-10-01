@@ -29,29 +29,59 @@ Audytor, Handlowiec (widzi też swój zespół audytorów), Manager, Zarząd/Adm
 
 - **Kokpit** — ekran startowy: dziś, oferty, alerty, przycisk „Rozpocznij dzień” (start czasu pracy + GPS).
 - **Orbita** — karta rozwoju: awatar poziomu w pierścieniu postępu, poziom, klienci do awansu, umowa ze spółką (rodzaj: B2B/zlecenie, data końca, wariant — pole od admina), stawki teraz i na kolejnym poziomie, KPI, flota, ścieżka 10 poziomów, odznaki.
-- **Skarbiec** — prowizje: szare = do dopięcia, zielone = zarobione; rozliczenia do akceptacji.
+- **Skarbiec** — prowizje: szare = do dopięcia, zielone = zarobione; rozliczenia do akceptacji; **Trajektoria** (niżej).
 - **Radar** — oferty od audytorów z licznikiem 3 dni.
 - **Misje** — kalendarz, zadania, spotkania (tworzone przy wpisywaniu klienta), linki do klienta w CRM; synchronizacja z Kalendarzem Google.
 - **Terytorium** — mapa rejonu od managera, każdy dom jako punkt (dane adresowe/budynki z państwowych danych Geoportalu), statusy: otworzył / nie otworzył / nie zainteresowany / umówione / wrócić. GPS POTWIERDZA obecność przy domu (np. 30 m), nie wykrywa sam. Procent „wyczyszczenia” rejonu. Czas pracy = czas otwartej aplikacji. GPS tylko w godzinach pracy.
 - **Akademia** — onboarding: osobne ścieżki audytora i handlowca (skrypt, bank obiekcji, filmy, quizy), egzaminy sprawdzane automatycznie, etapy odblokowują się po zdaniu.
 - **Konfigurator** — kalkulator ofertowy z repo `kacperkrol96/kalkulator-nle`. NIE kopiujemy logiki obliczeń — używamy jej z tamtego repo.
 - **Wieża** — panel managera: zespół, rejony (rysowanie na mapie), postępy w Akademii, alerty z Radaru, zatwierdzanie opinii 5★.
-- **Mennica** — panel zarządu: rozliczenia do akceptacji i korekty.
+- **Konstelacja** — osobny panel managera (razem z Wieżą): struktura jako gwiazdozbiór i eskadry (niżej).
+- **Mennica** — panel zarządu: rozliczenia do akceptacji i korekty, odliczanie do terminów, kolejka „Do wyjaśnienia”.
+
+## Trajektoria (w Skarbcu)
+
+To NIE jest prognoza zarobków.
+- Audytor i handlowiec widzą na żywo drogę każdego swojego klienta przez statusy umów: przebyte statusy z datami, obecny podświetlony, kolejny krok, ile kroków do zielonej prowizji.
+- Wejście: kliknięcie klienta albo szarej kwoty w Skarbcu + lista „Moje umowy”.
+- Powiadomienie przy każdej zmianie statusu („Biuro przesunęło umowę … do …”).
+- Odświeżanie przy otwarciu aplikacji + cyklicznie (domyślnie co 15 min, w ustawieniach); webhooki RRUP, jeśli są.
+- Cel: ludzie z terenu widzą, że biuro pracuje, bez wchodzenia do CRM.
+
+## Konstelacja (Etap 2, razem z Wieżą)
+
+- Struktura managera jako gwiazdozbiór: manager w centrum, jego ludzie wokół (handlowcy, a pod nimi ich audytorzy), awatary poziomów, linie powiązań. Jasność gwiazdy = aktywność w tym tygodniu, kolor = alert.
+- Na górze jedna liczba z animacją licznika: „Twój zarobek ze struktury w tym miesiącu” (dyferencja + opieka nad zespołem) — pierwsza rzecz, którą widzi manager.
+- Kliknięcie w osobę: jej klienci, KPI, ile manager zarobił dzięki niej.
+- **Eskadra** = zewnętrzna grupa sprzedażowa (np. grupa Łukasza Burligi, umowy z prefiksem ŁB), NIE handlowiec z audytorami. Eskadra ma własnego lidera i własny pakiet zasad rozliczeń, włączana/wyłączana jednym przełącznikiem w panelu admina; historia zostaje po wyłączeniu.
+- Styl: minimalistyczny, ale ma nakręcać do zarabiania ze skali.
 
 ## Zasady prowizji
 
 - Rozliczamy ZA KLIENTA, nie za umowę (termo + kocioł u jednego klienta = jedna prowizja).
 - **Solo / Duet** to zakres umów u JEDNEGO klienta (nie liczba handlowców):
-  - **Solo** = klient z jedną umową (samo termo ALBO samo źródło ciepła),
-  - **Duet** = klient z dwiema umowami: termomodernizacja + źródło ciepła („prace po korek”).
-  - Stawka należy się w całości handlowcowi przypisanemu do klienta — nic nie dzielimy między handlowców.
-  - Solo/Duet rozpoznajemy automatycznie po rodzajach umów klienta w CRM. Lista rodzajów umów należących do „termo” i do „źródła ciepła” jest w konfiguracji (edytuje admin).
-- **Handlowiec**: prowizja zielona od statusu „wysłanie wniosku do WFOŚ” lub dalej. Umowa „sam VAT” = prowizja −75%. Nadmarża od kwoty netto, limit 10% wartości umowy, udział wg poziomu. Brak minimum do utrzymania poziomu. Od poziomu 5 wzwyż do progów awansu wliczają się klienci całego zespołu (jego + wszystkich podległych handlowców); próg „od którego poziomu” jest edytowalny w panelu admina.
-- **Audytor**: prowizja zielona od statusu umowy audytowej „po pomiarach”. Stawka zależy od progu dochodowego klienta (podstawowy/podwyższony/najwyższy). Bonus za zamknięcie — zawsze, gdy handlowiec zamknie klienta z audytu tego audytora. Poziom zdobyty raz zostaje na zawsze. Od poziomu 5 liczą się klienci struktury + aktywne osoby. Manager dostaje dyferencję.
-- Wypłata = prowizja × mnożnik KPI.
-- Rozliczenia co 2 tygodnie.
-- Korekta po rezygnacji klienta po wypłacie: potrącenie w kolejnym okresie.
-- WSZYSTKIE stawki, progi, wagi i procenty w bazie, edytowalne przez admina. Zero liczb na sztywno w kodzie.
+  - **Solo** = tylko termo albo tylko źródło ciepła,
+  - **Duet** = termo + co najmniej jedno źródło ciepła („prace po korek”); REK nie wpływa na Solo/Duet,
+  - stawka należy się w całości handlowcowi przypisanemu do klienta — nic nie dzielimy,
+  - zakres rozpoznajemy z końcówki numeru umowy (tabela przypisań, sekcja CRM); umowa w statusie negatywnym się nie liczy.
+- **Handlowiec**: prowizja zielona od statusu „W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW” lub dalej. Klient „sam VAT” = prowizja −75%. Nadmarża od kwoty netto, limit 10% wartości netto umów termo + źródło ciepła (bez REK), udział wg poziomu. Brak minimum do utrzymania poziomu. Od poziomu 5 wzwyż do progów awansu wliczają się klienci całego zespołu (jego + wszystkich podległych handlowców); próg „od którego poziomu” jest edytowalny w panelu admina.
+- **„Sam VAT”** = klient na najwyższym progu dochodowym ORAZ bez umowy REK (reguła włączona, wyłączana w panelu). Po podpięciu Konfiguratora oznaczenie „sam VAT” z oferty ma pierwszeństwo (pole `samVatFromOffer` w modelu danych).
+- **Audytor**: prowizja szara od „DOKUMENTACJA POMIAROWA”, zielona od „TWORZENIE OFERTY” (umowa audytowa /A). Stawka zależy od progu dochodowego klienta (podstawowy/podwyższony/najwyższy). Bonus za zamknięcie — gdy prowizja handlowca u tego klienta jest zielona. Poziom zdobyty raz zostaje na zawsze. Od poziomu 5 liczą się klienci struktury + aktywne osoby. Manager dostaje dyferencję.
+- **Stawka wg poziomu z chwili, gdy prowizja zrobiła się zielona** (poziom, który osoba miała tuż przed tym klientem).
+- **Klienci do awansu**: rezygnacja / status negatywny po zaliczeniu odejmuje klienta z licznika, ale zdobyty poziom zostaje.
+- Wypłata = prowizja × mnożnik KPI. Wynagrodzenie za opiekę nad zespołem — bez mnożnika KPI.
+- **Spadek w status negatywny po zazieleniu** = potrącenie w rozliczeniu okresu, w którym nastąpił spadek (jeśli prowizja była zielona już w okresie wcześniejszym, czyli wypłacona). Potrącenie większe niż wypłata: wypłata 0 zł, reszta na kolejny okres; gdy osoba odchodzi — zarząd rozlicza resztę ręcznie w Mennicy.
+- **Nic nie liczymy na zgadywanych danych**: nierozpoznana końcówka, status, inicjały albo brak handlowca/audytora → kolejka „Do wyjaśnienia” w Mennicy, prowizja wstrzymana.
+- WSZYSTKIE stawki, progi, wagi, procenty, tabele przypisań i daty w bazie, edytowalne przez admina. Zero liczb na sztywno w kodzie.
+
+## Okresy rozliczeniowe
+
+| Okres | Rozliczenie / akceptacja | Wypłata |
+|---|---|---|
+| 1–15 dnia miesiąca | do 20. | 25. |
+| 16–ostatni dzień miesiąca | do 5. następnego miesiąca | 10. następnego miesiąca |
+
+Daty w ustawieniach admina; granice dni liczone w czasie polskim. Mennica pokazuje odliczanie do terminów. Koszt floty za miesiąc trafia do okresu 1–15 następnego miesiąca.
 
 ## Tabela — handlowcy (dane startowe)
 
@@ -117,14 +147,15 @@ Mechanika (obie role): każde KPI oceniane na poziomie I–V (1–5 pkt) × waga
 | KPI | Waga | I | II | III | IV | V |
 |---|---|---|---|---|---|---|
 | Opinie 5★ | 5 | 70% | 75% | 80% | 90% | 95% |
-| Komplet dokumentów w 24h | 5 | 70% | 80% | 90% | 95% | 100% |
+| Komplet dokumentów (handlowiec + biuro) | 5 | 70% | 80% | 90% | 95% | 100% |
 | Średni wynik KPI podległych audytorów | 4 | 30 | 46 | 59 | 70 | 90 pkt |
 | Czas podpisania oferty | 4 | ≤6 | ≤5 | ≤4 | ≤3,5 | ≤3 dni |
 | Wynik spółki | 2 | 90% | 95% | 100% | 105% | 110% |
 
 - **Opinie 5★** — % klientów z ofertą, którzy mają zaliczoną opinię 5★. Zaliczenie: handlowiec wgrywa screenshot opinii 5★ klienta z Google oraz zdjęcie z klientem. AI wstępnie odczytuje ze screena liczbę gwiazdek, nazwisko i datę; manager zatwierdza lub odrzuca w Wieży jednym kliknięciem. Wymagany checkbox „klient zgodził się na zdjęcie”. Screenshot i zdjęcie usuwane 90 dni po zaliczeniu.
-- **Komplet dokumentów w 24h** — % klientów, u których od podpisania umowy do statusu „komplet dokumentów” minęło ≤24h (z historii statusów w CRM).
-- **Czas podpisania oferty** — średni czas od statusu „oferta przekazana do handlowca” do podpisania umowy (z historii statusów w CRM). Oferta niepodpisana po 7 dniach wchodzi do średniej jako 7 dni.
+- **Komplet dokumentów (handlowiec + biuro)** — odpowiedzialność wspólna. Zaliczone, gdy od podpisania umowy („UMOWA PODPISANA”) do wejścia w pierwszy pozytywny status po weryfikacji („REALIZACJA AUDYTU - GWD” lub dalszy) minęło ≤ 24h. „WERYFIKACJA DOKUMENTOWA NEGATYWNA” po drodze liczy się do czasu. Okno 24h edytowalne w panelu; pilot startuje z 24h.
+- **Czas podpisania oferty** — średni czas od wejścia umowy audytowej /A w „PRZEKAZANA DO PH” do podpisania umowy sprzedażowej. Oferta niepodpisana po 7 dniach wchodzi do średniej jako 7 dni; każdy czas ograniczony do 7 dni.
+- KPI bez danych (np. handlowiec bez audytorów) jest pomijane, a wynik przeskalowany do 100 pkt.
 - **Wynik spółki** — % targetu miesiąca (target wpisuje admin).
 
 Żółte kartki: na razie kartka jest tylko zapisywana w historii osoby (najwyżej jedna na okres rozliczeniowy). Mechanizm kartek dla handlowców zdefiniujemy później.
@@ -137,7 +168,7 @@ Koszt auta za miesiąc jest potrącany automatycznie w najbliższym rozliczeniu 
 
 ## Radar — zasada 3 dni
 
-Audytor zapisuje ofertę → przypisany w CRM handlowiec dostaje powiadomienie.
+Start = wejście umowy audytowej /A w „PRZEKAZANA DO PH” → przypisany handlowiec dostaje powiadomienie.
 - Dzień 1: przypomnienie.
 - Dzień 3: oferta czerwona, handlowiec MUSI wybrać powód z listy obiekcji, alert do managera.
 - Dzień 7: oferta trafia do Wieży (manager: zostaw / przejmij / zamknij).
@@ -154,12 +185,40 @@ Powody zasilają statystyki dla Akademii.
 
 ## CRM (RRUP)
 
-- API: `https://funduszremontowy.rrcrm.pl/api/v1`.
-- W CRM jest moduł czasu trwania statusu — daty wejścia w statusy (m.in. „oferta przekazana do handlowca”, „komplet dokumentów”) bierzemy z historii statusów.
-- Znane problemy: pole przypisanego pracownika wraca puste; zdarzenia klienta zwracają błąd 422. Audytora ustalamy z historii przypisań/zdarzeń (przypisanie zmienia się z audytora na handlowca).
-- Warstwa CRM to osobny moduł z DANYMI TESTOWYMI. Prawdziwe połączenie dopiero po otrzymaniu klucza.
+- API: `https://funduszremontowy.rrcrm.pl/api/v1`. Warstwa CRM to osobny moduł z DANYMI TESTOWYMI; prawdziwe połączenie po otrzymaniu klucza.
 - RODO: nigdy nie pobieramy ani nie zapisujemy PESEL, numerów ksiąg wieczystych, numerów działek ani innych zbędnych danych.
 - Przycisk „zgłoś błąd przypisania klienta”.
+
+### Fakty (sprawdzone na umowach z CRM)
+
+- Typy umów: PREFINANSOWANIE 2.0 (termo i źródła ciepła), OZE 2.0 (REK), AUDYT CP 2.0 (/A). Pole typu NIE rozróżnia termo/kocioł.
+- Numer: `INICJAŁY/NR/MM/RR[RR]/ZAKRES` (np. `MW/12/09/26/TERMO`); zakres tylko w końcówce, pisownia niejednolita (TERMO/Termo/TERM, Kot, Rek), część numerów bez końcówki.
+- Pole „user” umowy często wskazuje audytora, nie handlowca; bywa puste.
+- Historia statusów: data wejścia = `createdAt`, status = `stateAfter`. Nazwy porównujemy bez względu na wielkość liter i wielokrotne spacje (np. „OCZEKIWANIE NA  GOPS/MOPS”).
+
+### Tabele przypisań (edytowalne w panelu admina)
+
+1. Końcówka numeru → zakres (bez względu na wielkość liter i skróty): TERMO/TERM → termomodernizacja; KOT → kocioł; PC → pompa ciepła; ZGAZ → kocioł zgazowujący na drewno; REK → rekuperacja (nie wpływa na Solo/Duet); A → audyt.
+2. Status → kategoria: „w toku”, „prowizja handlowca zarobiona”, „prowizja audytora szara”, „prowizja audytora zarobiona”, „negatywny”.
+3. Inicjały z numeru → osoba (awaryjne źródło handlowca).
+
+Wszystko nierozpoznane (końcówka, status, inicjały, brak handlowca/audytora) → kolejka „Do wyjaśnienia” w Mennicy.
+
+### Przypisania
+
+- Handlowiec = przypisany pracownik KLIENTA. Awaryjnie: inicjały z numeru umowy sprzedażowej.
+- Audytor = „user” z umowy audytowej (/A) tego klienta.
+
+### Ścieżki statusów
+
+- **PREFINANSOWANIE 2.0**: ZAWIERANIE UMOWY → UMOWA PODPISANA → WELCOME CALL → W TRAKCIE FINANSOWANIA → WYLICZENIE PROWIZJI → WERYFIKACJA UMOWY → WERYFIKACJA DOKUMENTOWA NEGATYWNA → REALIZACJA AUDYTU - GWD → PRZYGOTOWANIE DOKUMENTÓW WFOŚ → WERYFIKACJA DOKUMENTÓW WFOŚ → NEGATYWNA WERYFIKACJA DOKUMENTOWA - WFOŚ → W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW → OCZEKIWANIE NA DECYZJĘ → … (dalsze statusy dopiszemy z API).
+- **AUDYT CP 2.0**: ZAWIERANIE UMOWY → UMOWA PODPISANA → WERYFIKACJA FORMALNA → WELCOME CALL → WYLICZENIE PROWIZJI → OCZEKIWANIE NA GOPS/MOPS → WERYFIKACJA UMOWY → NEGATYWNA WERYFIKACJA DOKUMENTACYJNA → W TRAKCIE POMIARÓW → DOKUMENTACJA POMIAROWA → WERYFIKACJA POMIAROWA → NEGATYWNA WERYFIKACJA POMIAROWA → TWORZENIE OFERTY → PRZEKAZANA DO PH → SUKCES → WIN-BACK → …
+- **OZE 2.0 (REK)** — z obserwacji API: ZAWIERANIE UMOWY → UMOWA PODPISANA → W TRAKCIE FINANSOWANIA → WELCOME CALL → WERYFIKACJA UMOWY → ZAMAWANIE TOWARU (pisownia jak w CRM) → …
+
+Zasady:
+- „Status X lub dalej” = pozycja na ścieżce ≥ X; statusy negatywne (każdy z „NEGATYWNA”, WIN-BACK, SPAD) zawsze = „negatywny”.
+- Statusy mogą być pomijane (np. SUKCES zaraz po W TRAKCIE POMIARÓW) — liczy się pozycja na ścieżce.
+- „WYLICZENIE PROWIZJI” jest ignorowany (zostanie usunięty z CRM) — liczy się poprzedni status. Zniknięcie albo pojawienie się nieznanego statusu nie psuje aplikacji → „Do wyjaśnienia”.
 
 ## Wygląd
 
@@ -214,18 +273,25 @@ Next.js + TypeScript + Tailwind, Supabase (baza, logowanie Google, przechowywani
 
 ## Założenia i decyzje
 
-Status: ✅ rozstrzygnięte przez Kacpra · ❓ otwarte (w kodzie działa rekomendacja, wszystko jest ustawieniem w konfiguracji).
+Wszystkie założenia z Etapu 0 są rozstrzygnięte:
 
-1. ✅ **KPI 0–29 pkt** — mnożnik 75% + alert do managera + żółta kartka zapisana w historii osoby. Zasady kartek — później.
-2. ✅ **Solo / Duet** — zakres umów u jednego klienta (Solo = jedna umowa: samo termo albo samo źródło ciepła; Duet = termo + źródło ciepła). Stawka w całości dla handlowca przypisanego do klienta. Rozpoznawane po rodzajach umów w CRM.
-3. ❓ **„Sam VAT”** — obniżka −75% tylko wtedy, gdy WSZYSTKIE umowy klienta są „sam VAT”; dotyczy stawki podstawowej, nie nadmarży. Otwarte: Duet, w którym tylko jedna umowa jest „sam VAT”.
-4. ❓ **Limit nadmarży** — 10% sumy wartości netto wszystkich umów klienta; ujemna nadmarża nie obniża prowizji.
-5. ❓ **Bonus audytora za zamknięcie** — naliczany, gdy klient osiągnie status „wysłanie wniosku do WFOŚ” (ten sam moment co zielona prowizja handlowca).
-6. ✅/❓ **Klienci do awansu** — handlowcy: od poziomu 5 wliczają się klienci całego zespołu (próg edytowalny) ✅. Otwarte: czy rezygnacja po zaliczeniu odejmuje klienta z licznika.
-7. ❓ **Stawka wg poziomu** — z którego momentu brać poziom do stawki.
-8. ❓ **Brak danych KPI** — KPI bez danych jest pomijane, a wynik przeskalowany do 100 pkt.
-9. ❓ **Czas podpisania oferty** — każdy czas ograniczony z góry do 7 dni (także oferty podpisane później).
-10. ✅/❓ **Flota i dodatki** — koszt auta potrącany automatycznie w najbliższym rozliczeniu, osobna pozycja „Flota” ✅. Otwarte: wynagrodzenie za opiekę nad zespołem bez mnożnika KPI.
-11. ❓ **Potrącenie większe niż wypłata** — wypłata 0 zł, reszta przechodzi na kolejny okres.
-12. ❓ **Start okresów rozliczeniowych** — co 14 dni od poniedziałku 5.01.2026.
-13. ❓ **Nazwy statusów i rodzajów umów w CRM** — w danych testowych przykładowe nazwy; mapowanie na prawdziwe nazwy z RRUP przy integracji.
+1. ✅ KPI 0–29 pkt — mnożnik 75% + alert do managera + żółta kartka (zapis w historii osoby).
+2. ✅ Solo / Duet — zakres umów u jednego klienta, z końcówki numeru.
+3. ✅ „Sam VAT” — reguła: najwyższy próg dochodowy + brak REK; oznaczenie z oferty ma pierwszeństwo.
+4. ✅ Limit nadmarży — 10% wartości netto umów termo + źródło ciepła (bez REK); ujemna nadmarża nie obniża prowizji.
+5. ✅ Bonus audytora za zamknięcie — gdy prowizja handlowca u klienta jest zielona.
+6. ✅ Klienci do awansu — handlowcy od poz. 5 z zespołem (edytowalne); rezygnacja odejmuje klienta, poziom zostaje.
+7. ✅ Stawka wg poziomu z chwili zazielenienia prowizji.
+8. ✅ Brak danych KPI — pomijane, wynik przeskalowany.
+9. ✅ Czas podpisania oferty — każdy czas ograniczony do 7 dni.
+10. ✅ Flota — potrącana w najbliższym rozliczeniu jako „Flota”; opieka nad zespołem bez mnożnika KPI.
+11. ✅ Potrącenie większe niż wypłata — reszta na kolejny okres; odejście osoby — ręcznie w Mennicy.
+12. ✅ Okresy — 1–15 i 16–koniec miesiąca (tabela wyżej).
+13. ✅ Statusy i zakresy — z prawdziwego CRM (sekcja CRM), tabele edytowalne.
+
+### Do potwierdzenia przy integracji CRM
+
+- Status „DZIAŁ PRAWNY” (widoczny w CRM po WIN-BACK) nie jest w tabeli — dziś trafia do „Do wyjaśnienia”. Rekomendacja: oznaczyć jako „negatywny”.
+- Statusy po „OCZEKIWANIE NA DECYZJĘ” (PREFINANSOWANIE) i dalsza ścieżka OZE 2.0 — dopiszemy z API (lista API zwraca tylko 100 najnowszych umów).
+- Skąd brać próg dochodowy klienta i nadmarżę (prawdopodobnie Konfigurator / audyt).
+- Pełna tabela inicjałów handlowców (dziś dane testowe).

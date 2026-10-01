@@ -8,12 +8,7 @@ import type { IncomeTier } from "@/lib/config/types";
 
 export interface CrmStatusChange {
   status: string;
-  /** ISO 8601 — data wejścia w status (moduł czasu trwania statusu w CRM). */
-  at: string;
-}
-
-export interface CrmAssignmentChange {
-  employeeId: string;
+  /** ISO 8601 — data wejścia w status (historia statusów: createdAt / stateAfter). */
   at: string;
 }
 
@@ -29,12 +24,18 @@ export interface CrmEmployee {
 
 export interface CrmAgreement {
   id: string;
-  /** Rodzaj umowy jak w CRM (np. „Termomodernizacja”, „Kocioł”) — Solo/Duet liczymy z tego pola. */
-  kind: string;
+  clientId: string;
+  /** Numer umowy, np. „MW/12/09/26/TERMO” — zakres i inicjały odczytujemy z numeru. */
+  number: string;
+  /** Typ z CRM: PREFINANSOWANIE 2.0, OZE 2.0, AUDYT CP 2.0 (nie rozróżnia termo/kocioł). */
+  type: string;
+  /** Historia statusów (rosnąco po dacie); ostatni wpis = obecny status. */
+  statusHistory: CrmStatusChange[];
+  /** Pole „user” umowy — przy umowie audytowej (/A) to audytor; przy innych bywa przypadkowe. */
+  userId: string | null;
   valueNet: number;
+  /** Nadmarża netto (docelowo z Konfiguratora). */
   surchargeNet: number;
-  samVat: boolean;
-  signedAt: string | null;
 }
 
 export interface CrmClient {
@@ -43,14 +44,13 @@ export interface CrmClient {
   displayName: string;
   city: string;
   incomeTier: IncomeTier;
-  salesStatusHistory: CrmStatusChange[];
-  auditStatusHistory: CrmStatusChange[];
+  /** Przypisany pracownik KLIENTA = handlowiec (w API bywa puste → inicjały z numeru). */
+  assignedEmployeeId: string | null;
   /**
-   * Historia przypisań (pole „przypisany pracownik” w API wraca puste),
-   * przypisanie zmienia się z audytora na handlowca.
+   * Oznaczenie „sam VAT” z oferty (Konfigurator). Gdy ustawione — ma
+   * pierwszeństwo przed regułą (próg dochodowy + brak REK). null = brak oferty.
    */
-  assignmentHistory: CrmAssignmentChange[];
-  agreements: CrmAgreement[];
+  samVatFromOffer: boolean | null;
   /** Link do klienta w CRM. */
   crmUrl: string;
 }
@@ -59,7 +59,7 @@ export interface CrmProvider {
   readonly source: "mock" | "rrup";
   listEmployees(): Promise<CrmEmployee[]>;
   listClients(): Promise<CrmClient[]>;
-  getClient(id: string): Promise<CrmClient | null>;
+  listAgreements(): Promise<CrmAgreement[]>;
   /** Przycisk „zgłoś błąd przypisania klienta”. */
   reportAssignmentError(clientId: string, reporterId: string, note: string): Promise<void>;
 }

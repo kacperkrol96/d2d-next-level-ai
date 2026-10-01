@@ -1,42 +1,57 @@
-import type { AgreementCategories, AppConfig, AuditorLevel, IncomeTier, SalesLevel } from "@/lib/config/types";
+import type { AgreementScope, AppConfig, AuditorLevel, IncomeTier, SalesLevel, StatusCategory } from "@/lib/config/types";
 import { roundMoney } from "./money";
-import { isCancelled, isStatusAtOrBeyond } from "./status";
 
-/** Szara = do dopięcia, zielona = zarobiona, anulowana = klient zrezygnował. */
-export type CommissionState = "grey" | "green" | "cancelled";
+/**
+ * Szara = do dopięcia, zielona = zarobiona, anulowana = status negatywny,
+ * brak = jeszcze przed progiem prowizji (np. audyt przed dokumentacją pomiarową).
+ */
+export type CommissionState = "grey" | "green" | "cancelled" | "none";
 
 // ---------------------------------- HANDLOWIEC ----------------------------------
 
 export interface SalesAgreementInput {
-  /** Rodzaj umowy z CRM (np. „Termomodernizacja”, „Kocioł”). */
-  kind: string;
+  scope: Extract<AgreementScope, "thermo" | "heatSource">;
+  category: StatusCategory;
   /** Wartość umowy netto. */
   valueNet: number;
   /** Nadmarża netto na umowie. */
   surchargeNet: number;
-  /** Umowa „sam VAT”. */
-  samVat: boolean;
 }
 
 export interface SalesClientInput {
-  /** Aktualny status sprzedażowy klienta w CRM. */
-  status: string;
-  /** Wszystkie umowy klienta — zawsze JEDNA prowizja za klienta. */
+  /** Umowy termo i źródło ciepła klienta — zawsze JEDNA prowizja za klienta. */
   agreements: SalesAgreementInput[];
+  /** Klient „sam VAT” (patrz isSamVat). */
+  samVat: boolean;
 }
 
 /**
  * Zakres umów u JEDNEGO klienta:
- * - Solo = umowa tylko z jednej kategorii (samo termo ALBO samo źródło ciepła),
- * - Duet = termomodernizacja + źródło ciepła („prace po korek”).
- * Rodzaje umów spoza obu kategorii nie wpływają na zakres.
+ * - Solo = tylko termo albo tylko źródło ciepła,
+ * - Duet = termo + co najmniej jedno źródło ciepła („prace po korek”).
+ * Umowy z negatywnym statusem się nie liczą; REK nie wpływa na zakres.
  */
 export type SalesScope = "solo" | "duo";
 
-export function salesScope(agreements: readonly { kind: string }[], categories: AgreementCategories): SalesScope {
-  const hasThermo = agreements.some((a) => categories.thermo.includes(a.kind));
-  const hasHeatSource = agreements.some((a) => categories.heatSource.includes(a.kind));
+export function salesScope(agreements: readonly { scope: AgreementScope; category?: StatusCategory | string }[]): SalesScope {
+  const active = agreements.filter((a) => a.category !== "negative");
+  const hasThermo = active.some((a) => a.scope === "thermo");
+  const hasHeatSource = active.some((a) => a.scope === "heatSource");
   return hasThermo && hasHeatSource ? "duo" : "solo";
+}
+
+/**
+ * „Sam VAT” = klient na progu dochodowym z reguły (domyślnie najwyższym) ORAZ bez
+ * aktywnej umowy REK. Oznaczenie z oferty (Konfigurator) ma pierwszeństwo.
+ */
+export function isSamVat(
+  client: { incomeTier: IncomeTier; samVatFromOffer: boolean | null },
+  hasActiveRek: boolean,
+  config: AppConfig,
+): boolean {
+  if (client.samVatFromOffer !== null) return client.samVatFromOffer;
+  if (!config.samVat.enabled) return false;
+  return client.incomeTier === config.samVat.incomeTier && !hasActiveRek;
 }
 
 export interface SalesCommission {
@@ -55,36 +70,37 @@ export interface SalesCommission {
 
 /**
  * Prowizja handlowca ZA KLIENTA — w całości dla handlowca przypisanego do klienta.
- * - stawka Solo/Duet wg poziomu; Solo/Duet rozpoznawane po rodzajach umów klienta,
- * - „sam VAT” (wszystkie umowy klienta) = obniżka wg konfiguracji,
- * - nadmarża netto z limitem % wartości umów netto × udział wg poziomu.
+ * - zielona, gdy którakolwiek aktywna umowa termo/źródło jest w kategorii „prowizja handlowca zarobiona”,
+ * - stawka Solo/Duet wg poziomu, „sam VAT” = obniżka wg konfiguracji,
+ * - nadmarża netto z limitem % wartości umów termo + źródło (bez REK) × udział wg poziomu.
  */
 export function salesClientCommission(input: SalesClientInput, level: SalesLevel, config: AppConfig): SalesCommission {
-  const { rules, pipelines } = config;
-  const scope = salesScope(input.agreements, config.agreementCategories);
+  const { rules } = config;
+  const active = input.agreements.filter((a) => a.category !== "negative");
+  const scope = salesScope(active);
   const baseRate = scope === "solo" ? level.soloRate : level.duoRate;
-  const samVat = input.agreements.length > 0 && input.agreements.every((a) => a.samVat);
-  const base = roundMoney(samVat ? baseRate * (1 - rules.samVatReduction) : baseRate);
+  const base = roundMoney(input.samVat ? baseRate * (1 - rules.samVatReduction) : baseRate);
 
-  const totalValue = input.agreements.reduce((sum, a) => sum + a.valueNet, 0);
-  const totalSurcharge = input.agreements.reduce((sum, a) => sum + Math.max(0, a.surchargeNet), 0);
+  const totalValue = active.reduce((sum, a) => sum + a.valueNet, 0);
+  const totalSurcharge = active.reduce((sum, a) => sum + Math.max(0, a.surchargeNet), 0);
   const surchargeCapped = roundMoney(Math.min(totalSurcharge, totalValue * rules.surchargeCapShare));
   const surchargePart = roundMoney(surchargeCapped * level.surchargeShare);
 
-  let state: CommissionState = "grey";
-  if (isCancelled(input.status, pipelines.cancelled)) state = "cancelled";
-  else if (isStatusAtOrBeyond(input.status, rules.salesGreenFromStatus, pipelines.sales)) state = "green";
+  let state: CommissionState;
+  if (input.agreements.length === 0) state = "none";
+  else if (active.length === 0) state = "cancelled";
+  else state = active.some((a) => a.category === "sales_earned") ? "green" : "grey";
 
-  return { state, scope, baseRate, base, surchargeCapped, surchargePart, total: roundMoney(base + surchargePart), samVat };
+  return { state, scope, baseRate, base, surchargeCapped, surchargePart, total: roundMoney(base + surchargePart), samVat: input.samVat };
 }
 
 // ---------------------------------- AUDYTOR ----------------------------------
 
 export interface AuditorClientInput {
-  /** Status umowy audytowej. */
-  auditStatus: string;
-  /** Status sprzedażowy klienta (do bonusu za zamknięcie). */
-  salesStatus: string;
+  /** Kategoria umowy audytowej (/A). */
+  auditCategory: StatusCategory;
+  /** Czy handlowiec zamknął klienta (prowizja handlowca zielona). */
+  salesClosed: boolean;
   incomeTier: IncomeTier;
 }
 
@@ -98,25 +114,19 @@ export interface AuditorCommission {
   total: number;
 }
 
-export function auditorClientCommission(input: AuditorClientInput, level: AuditorLevel, config: AppConfig): AuditorCommission {
-  const { rules, pipelines } = config;
+/** Audytor: szara od „DOKUMENTACJA POMIAROWA”, zielona od „TWORZENIE OFERTY” (kategorie z tabeli statusów). */
+export function auditorClientCommission(input: AuditorClientInput, level: AuditorLevel): AuditorCommission {
   const rate = level.rates[input.incomeTier];
-
-  if (isCancelled(input.auditStatus, pipelines.cancelled)) {
-    return { state: "cancelled", rate, closingBonus: 0, potentialClosingBonus: 0, total: 0 };
+  if (input.auditCategory === "negative") return { state: "cancelled", rate, closingBonus: 0, potentialClosingBonus: 0, total: 0 };
+  if (input.auditCategory !== "auditor_grey" && input.auditCategory !== "auditor_earned") {
+    return { state: "none", rate, closingBonus: 0, potentialClosingBonus: 0, total: 0 };
   }
-
-  const green = isStatusAtOrBeyond(input.auditStatus, rules.auditorGreenFromStatus, pipelines.audit);
-  const closed =
-    !isCancelled(input.salesStatus, pipelines.cancelled) &&
-    isStatusAtOrBeyond(input.salesStatus, rules.auditorClosingBonusFromStatus, pipelines.sales);
-  const closingBonus = closed ? level.closingBonus : 0;
-
+  const closingBonus = input.salesClosed ? level.closingBonus : 0;
   return {
-    state: green ? "green" : "grey",
+    state: input.auditCategory === "auditor_earned" ? "green" : "grey",
     rate,
     closingBonus,
-    potentialClosingBonus: closed ? 0 : level.closingBonus,
+    potentialClosingBonus: input.salesClosed ? 0 : level.closingBonus,
     total: roundMoney(rate + closingBonus),
   };
 }

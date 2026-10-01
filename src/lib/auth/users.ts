@@ -80,7 +80,3 @@ export const roleLabels: Record<Role, string> = {
   manager: "Manager",
   admin: "Zarząd",
 };
-
-export function findDemoUser(id: string | undefined): AppUser | null {
-  return demoUsers.find((u) => u.id === id) ?? null;
-}

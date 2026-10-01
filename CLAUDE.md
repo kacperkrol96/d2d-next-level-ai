@@ -16,11 +16,14 @@ Kacper (Next Level Energy) NIE jest programistą. Piszemy do niego prosto, po po
 4. **Przed dużą zmianą architektury — zapytaj Kacpra.**
 5. **Zero liczb biznesowych na sztywno w kodzie.** Stawki, progi, wagi, procenty, statusy — tylko z `getConfig()` (`src/lib/config`). Funkcje w `src/lib/domain` przyjmują konfigurację jako parametr.
 6. **RODO:** nigdy nie pobieramy ani nie zapisujemy PESEL, numerów ksiąg wieczystych, numerów działek ani innych zbędnych danych z CRM.
-7. **CRM tylko przez `getCrm()`** (`src/lib/crm`) — dane testowe, dopóki nie ma klucza RRUP.
+7. **CRM tylko przez źródło danych** (`getDataSource().crm()`) — dane testowe w kształcie RRUP, dopóki nie ma klucza.
 8. **Konfigurator:** nie kopiujemy logiki z `kacperkrol96/kalkulator-nle` — używamy jej z tamtego repo.
 9. **Wydawanie:** każdy etap na osobnej gałęzi → Pull Request. Scalenie do `main` TYLKO po akceptacji Kacpra (ogląda podgląd Vercel na iPadzie). Po etapie podaj: link do PR, link do podglądu, listę do przetestowania.
-10. **Przed prawdziwymi danymi** przypomnij Kacprowi: Supabase Pro + kopie zapasowe (lista w `docs/PLAN.md`).
-11. Nazwy paneli są obowiązkowe: Kokpit, Orbita, Skarbiec, Radar, Misje, Terytorium, Akademia, Konfigurator, Wieża, Mennica.
+10. **Zrzuty ekranu:** do każdego podsumowania etapu dołącz zrzuty (iPad poziomo + telefon) kluczowych widoków, zapisane w `docs/zrzuty/<etap>/`.
+11. **Dane tylko przez `getDataSource()`** (`src/lib/data`) — jedno miejsce podmiany na Supabase; nie licz prowizji na zgadywanych danych (nierozpoznane → „Do wyjaśnienia”).
+12. **Przed pilotem** przypomnij o etapie „Dostępy” (Supabase, logowanie Google, Vercel).
+13. **Przed prawdziwymi danymi** przypomnij Kacprowi: Supabase Pro + kopie zapasowe (lista w `docs/PLAN.md`).
+14. Nazwy paneli są obowiązkowe: Kokpit, Orbita, Skarbiec, Radar, Misje, Terytorium, Akademia, Konfigurator, Wieża, Konstelacja, Mennica.
 
 ## Wygląd i ruch
 
@@ -32,8 +35,9 @@ Kacper (Next Level Energy) NIE jest programistą. Piszemy do niego prosto, po po
 ## Struktura
 
 - `src/lib/config` — typy i dane startowe konfiguracji (docelowo tabele Supabase)
-- `src/lib/domain` — czyste obliczenia (prowizje, KPI, poziomy, flota, rozliczenia) + `__tests__`
-- `src/lib/crm` — warstwa CRM (interfejs, dane testowe, ustalanie przypisań)
+- `src/lib/domain` — czyste obliczenia (rozpoznawanie umów i statusów, prowizje, KPI, poziomy, flota, okresy, trajektoria) + `__tests__`
+- `src/lib/data` — źródło danych (`DataSource`): dziś dane testowe, potem Supabase
+- `src/lib/crm` — model i dane testowe CRM (RRUP)
 - `src/lib/auth` — sesja (Etap 0: testowa; Etap 1: Supabase + Google Workspace)
 - `src/lib/services` — składanie danych dla ekranów
 - `src/app/(app)/<panel>` — ekrany paneli; `src/components` — komponenty UI
