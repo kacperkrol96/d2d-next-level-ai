@@ -57,6 +57,7 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 ## Etap 3 — Wieża + Konstelacja (z eskadrami)
 
 - Wieża: zespół, postępy w Akademii, alerty KPI poniżej minimum, zatwierdzanie opinii 5★ (screen + zdjęcie, zgoda, odczyt AI, usuwanie po 90 dniach)
+- Wieża — miejsca przygotowane pod etapy 5–6: alerty „puste przejścia”, wyjątki od reguły „Nie ma w aplikacji = nie ma klienta”, odsłuch nagrań
 - Konstelacja: struktura jako gwiazdozbiór, licznik „Twój zarobek ze struktury w tym miesiącu” (dyferencja + opieka nad zespołem), karta osoby
 - Eskadry: zewnętrzne grupy (np. prefiks ŁB), własny lider i pakiet zasad, przełącznik w panelu admina, historia po wyłączeniu
 
@@ -66,14 +67,29 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - B2B: dane do faktury; Umowa zlecenia: rachunek PDF + wysyłka mailem
 - Obsługa kolejki „Do wyjaśnienia”, panel admina: tabele przypisań, stawki, terminy
 
-## Etap 5 — Radar i Misje
+## Etap 5 — Radar i Misje (+ leady, nagrania)
 
 - Radar: start od „PRZEKAZANA DO PH”, zasada 3 dni (przypomnienie, czerwona + powód, Wieża po 7 dniach), puls radaru
-- Misje: kalendarz, zadania, spotkania, synchronizacja z Kalendarzem Google
+- Misje: kalendarz, zadania, spotkania umawiane tylko w aplikacji, synchronizacja z Kalendarzem Google
+- Lead w aplikacji: formularz + **lead głosem** (dyktowanie → AI wypełnia → zatwierdzenie jednym kliknięciem)
+- Kolejka „Do wysłania do CRM” dla leadów i spotkań (wysyłka po uzyskaniu prawa zapisu w RRUP)
+- **Nagrywanie rozmów v1.0**: „Nagraj” → „Wyślij” na audycie i spotkaniu, formuła informacyjna + checkbox zgody, powiązanie z klientem/spotkaniem, lista nagrań w Wieży (per osoba, filtr), auto-usuwanie po X dniach (domyślnie 30)
+- Tryb offline (kolejka zapisów + nagrań, synchronizacja po odzyskaniu zasięgu)
+- Reguła „Nie ma w aplikacji = nie ma klienta” (przełącznik, domyślnie wyłączony) + wyjątki managera z powodem
+
+## Etap 6 — Terytorium i raportowanie w terenie
+
+- Rejony rysowane przez managera, domy z Geoportalu, statusy domów, procent wyczyszczenia rejonu, fala na mapie
+- **Odhaczenie domu w 2 sekundy** (GPS podświetla najbliższy dom), potwierdzenie obecności ~30 m
+- **Aktywne bloki czasu pracy** (min. 1 dom / 15 min — w ustawieniach), **„Zamknij dzień”** z obowiązkowym podsumowaniem
+- **Alert „puste przejścia”** w Wieży (GPS minął X domów, odhaczono Y — próg w ustawieniach)
+- **KPI „Raportowanie” z aplikacji** zamiast „Raportowanie CRM” u audytorów (+ testy)
+- Ograniczenie: GPS tylko przy otwartej aplikacji (PWA na iOS nie działa w tle) — weryfikacja w pilocie
 
 ## Etap Dostępy — logowanie Google, baza, podgląd Vercel (⚠️ PRZED PILOTEM — przypomnieć Kacprowi)
 
 - Supabase (tabele z `src/lib/config/seed.ts`, RLS), `SupabaseDataSource` w miejsce danych testowych
+- Supabase Storage na nagrania (auto-usuwanie po X dniach) i pliki opinii 5★
 - Logowanie Google Workspace, profile i role
 - Vercel: podgląd na każdy PR + domena `app.nextlevelenergy.pl`, przycisk „Zaloguj” na www
 
@@ -81,12 +97,12 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 
 - `RrupCrm` w miejsce `MockCrm` (ten sam interfejs), webhooki RRUP jeśli dostępne
 - Uzupełnienie ścieżek statusów i tabeli inicjałów, filtr RODO na wejściu
+- Gdy będzie prawo zapisu w RRUP: wysyłka kolejki leadów i spotkań do CRM
 
 ## Później w 1.0
 
 - Konfigurator (logika z repo `kalkulator-nle` — poproszę o dodanie repo do sesji)
-- Terytorium (rejony, mapa domów z Geoportalu, GPS)
 
 ## Kolejne wersje
 
-1.1 Symulator (trener głosowy AI) · 2.0 rankingi, konkursy, awatary 3D · 3.0 Arena · 4.0 bank i księgowość
+1.1 Symulator (trener głosowy AI) + transkrypcja i ocena nagranych rozmów wg rubryki skryptu (audio usuwane po transkrypcji, dane osobowe ukryte) · 2.0 rankingi, konkursy, awatary 3D · 3.0 Arena · 4.0 bank i księgowość

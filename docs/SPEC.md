@@ -31,11 +31,11 @@ Audytor, Handlowiec (widzi też swój zespół audytorów), Manager, Zarząd/Adm
 - **Orbita** — karta rozwoju: awatar poziomu w pierścieniu postępu, poziom, klienci do awansu, umowa ze spółką (rodzaj: B2B/zlecenie, data końca, wariant — pole od admina), stawki teraz i na kolejnym poziomie, KPI, flota, ścieżka 10 poziomów, odznaki.
 - **Skarbiec** — prowizje: szare = do dopięcia, zielone = zarobione; rozliczenia do akceptacji; **Trajektoria** (niżej).
 - **Radar** — oferty od audytorów z licznikiem 3 dni.
-- **Misje** — kalendarz, zadania, spotkania (tworzone przy wpisywaniu klienta), linki do klienta w CRM; synchronizacja z Kalendarzem Google.
-- **Terytorium** — mapa rejonu od managera, każdy dom jako punkt (dane adresowe/budynki z państwowych danych Geoportalu), statusy: otworzył / nie otworzył / nie zainteresowany / umówione / wrócić. GPS POTWIERDZA obecność przy domu (np. 30 m), nie wykrywa sam. Procent „wyczyszczenia” rejonu. Czas pracy = czas otwartej aplikacji. GPS tylko w godzinach pracy.
+- **Misje** — kalendarz, zadania, spotkania (tworzone przy wpisywaniu klienta, umawiane tylko w aplikacji), linki do klienta w CRM; synchronizacja z Kalendarzem Google; lead głosem; nagrywanie spotkania domykającego (sekcje niżej).
+- **Terytorium** — mapa rejonu od managera, każdy dom jako punkt (dane adresowe/budynki z państwowych danych Geoportalu), statusy: otworzył / nie otworzył / nie zainteresowany / umówione / wrócić. GPS POTWIERDZA obecność przy domu (np. 30 m), nie wykrywa sam. Procent „wyczyszczenia” rejonu. Czas pracy = czas otwartej aplikacji, liczony w aktywnych blokach (sekcja „Raportowanie w terenie”). GPS tylko w godzinach pracy. Odhaczenie domu w 2 sekundy, tryb offline.
 - **Akademia** — onboarding: osobne ścieżki audytora i handlowca (skrypt, bank obiekcji, filmy, quizy), egzaminy sprawdzane automatycznie, etapy odblokowują się po zdaniu.
 - **Konfigurator** — kalkulator ofertowy z repo `kacperkrol96/kalkulator-nle`. NIE kopiujemy logiki obliczeń — używamy jej z tamtego repo.
-- **Wieża** — panel managera: zespół, rejony (rysowanie na mapie), postępy w Akademii, alerty z Radaru, zatwierdzanie opinii 5★.
+- **Wieża** — panel managera: zespół, rejony (rysowanie na mapie), postępy w Akademii, alerty z Radaru, zatwierdzanie opinii 5★, alerty „puste przejścia”, wyjątki od reguły „Nie ma w aplikacji = nie ma klienta”, odsłuch nagrań rozmów.
 - **Konstelacja** — osobny panel managera (razem z Wieżą): struktura jako gwiazdozbiór i eskadry (niżej).
 - **Mennica** — panel zarządu: rozliczenia do akceptacji i korekty, odliczanie do terminów, kolejka „Do wyjaśnienia”.
 
@@ -55,6 +55,50 @@ To NIE jest prognoza zarobków.
 - Kliknięcie w osobę: jej klienci, KPI, ile manager zarobił dzięki niej.
 - **Eskadra** = zewnętrzna grupa sprzedażowa (np. grupa Łukasza Burligi, umowy z prefiksem ŁB), NIE handlowiec z audytorami. Eskadra ma własnego lidera i własny pakiet zasad rozliczeń, włączana/wyłączana jednym przełącznikiem w panelu admina; historia zostaje po wyłączeniu.
 - Styl: minimalistyczny, ale ma nakręcać do zarabiania ze skali.
+
+## Raportowanie w terenie (Terytorium + Misje)
+
+Problem: ludzie nie odhaczają domów i nie wpisują leadów. Rozwiązanie w trzech warstwach.
+
+### a) Szybciej wpisać niż pominąć
+
+- **Odhaczenie domu w 2 sekundy**: aplikacja z GPS podświetla najbliższy dom, handlowiec stuka tylko status.
+- **Lead głosem**: dyktowanie („Kowalski, czwartek 17:00, pompa ciepła”) → AI wypełnia formularz → zatwierdzenie jednym kliknięciem.
+- **Spotkania umawiane tylko w aplikacji** → od razu w Misjach i w Kalendarzu Google.
+- **Tryb offline** z synchronizacją po odzyskaniu zasięgu (domy, leady, spotkania, nagrania).
+
+### b) Aplikacja sama wykrywa brak raportowania
+
+- **Czas pracy liczy się tylko w aktywnych blokach**: blok 15 min jest aktywny, gdy odhaczono w nim min. 1 dom (długość bloku i minimum w ustawieniach).
+- **Alert „puste przejścia” w Wieży**: GPS minął X domów, odhaczono Y (próg w ustawieniach).
+- **„Zamknij dzień”**: obowiązkowe podsumowanie dnia (domy, otwarcia, leady) przed zakończeniem pracy.
+
+### c) Konsekwencje
+
+- **KPI „Raportowanie”** liczone automatycznie z aplikacji — zastępuje ręczne „Raportowanie CRM” u audytorów (waga i progi bez zmian do decyzji).
+- **Reguła „Nie ma w aplikacji = nie ma klienta”**: prowizja i zaliczenie do awansu tylko dla klientów, których lead powstał w aplikacji PRZED umową. Przełącznik w ustawieniach, domyślnie WYŁĄCZONY. Manager może zatwierdzić wyjątek z podaniem powodu (zapis w historii). Klient bez leadu przy włączonej regule → „Do wyjaśnienia” (blokuje prowizję i awans), dopóki manager nie zatwierdzi wyjątku.
+- **Zapis do CRM**: leady i spotkania trafiają do kolejki „Do wysłania do CRM”. Wysyłka wymaga prawa zapisu w RRUP — podłączymy później; do tego czasu kolejka czeka, a dane są w aplikacji.
+
+### Ograniczenia techniczne (do sprawdzenia w pilocie)
+
+- PWA na iPhonie/iPadzie **nie śledzi GPS w tle** (ekran zablokowany albo inna aplikacja na wierzchu). „Puste przejścia” i aktywne bloki liczymy więc tylko wtedy, gdy aplikacja jest otwarta — zgodnie z zasadą „czas pracy = czas otwartej aplikacji”. Jeśli to za mało, rozwiązaniem jest aplikacja natywna (osobna decyzja).
+- „Lead głosem” wymaga usługi rozpoznawania mowy i AI (dostawca do wyboru — najpewniej ten sam co dla Symulatora); bez zasięgu nagranie dyktowania czeka na synchronizację.
+
+## Nagrywanie rozmów (audyt i spotkanie domykające)
+
+### v1.0
+
+- Przycisk **„Nagraj”** na ekranie audytu i spotkania → **„Wyślij”**. Nagranie automatycznie powiązane z klientem i spotkaniem.
+- Przed nagraniem ekran z **formułą informacyjną dla klienta** (tekst w ustawieniach) + obowiązkowy checkbox **„Klient poinformowany o nagrywaniu”** — bez niego nagrywanie się nie uruchomi.
+- Manager odsłuchuje nagrania w **Wieży** (lista per osoba, filtr audyt/spotkanie).
+- Nagrania w Supabase Storage (po podłączeniu), **automatyczne usuwanie po X dniach** (domyślnie 30, w ustawieniach). Działa też bez zasięgu — wysyłka po synchronizacji.
+- Ograniczenie PWA: podczas nagrywania aplikacja musi być otwarta (zablokowanie ekranu może przerwać nagranie na iOS) — aplikacja pilnuje, by ekran nie gasł, i ostrzega przed wyjściem.
+- Do potwierdzenia z prawnikiem / IOD: treść formuły informacyjnej, podstawa prawna i okres przechowywania.
+
+### v1.1 (razem z Symulatorem)
+
+- Transkrypcja → ocena wg rubryki skryptu → informacja zwrotna dla handlowca/audytora + raport dla managera. Ta sama rubryka ocenia rozmowy z Symulatora i prawdziwe.
+- Po transkrypcji audio usuwane; zostaje transkrypcja z ukrytymi danymi osobowymi.
 
 ## Zasady prowizji
 
@@ -139,7 +183,7 @@ Mechanika (obie role): każde KPI oceniane na poziomie I–V (1–5 pkt) × waga
 | Liczba unikalnych spotkań | 6 | 3 | 3,25 | 3,5 | 3,75 | 4 |
 | Komplet leadów na cykl | 4 | 9 | 9,5 | 10 | 11 | 11,5 |
 | Realizacja targetu spółki | 4 | 90% | 95% | 100% | 105% | 110% |
-| Raportowanie CRM | 4 | 85% | 90% | 92,5% | 95% | 100% |
+| Raportowanie CRM → **Raportowanie (z aplikacji)** | 4 | 85% | 90% | 92,5% | 95% | 100% |
 | Termin realizacji zadań w CRM | 2 | 48h | 36h | 24h | 12h | 0h |
 
 ### Handlowiec (propozycja domyślna, do zmiany w panelu)
@@ -252,7 +296,7 @@ Next.js + TypeScript + Tailwind, Supabase (baza, logowanie Google, przechowywani
 ## Plan wersji
 
 - **1.0** (etapami): 0) specyfikacja i szkielet → 1) logowanie, role, Orbita, Skarbiec, KPI → 2) Akademia + Wieża → 3) Mennica → 4) Konfigurator, Radar, Misje → 5) Terytorium (rejony, mapa domów, GPS).
-- **1.1**: Symulator — głosowy trener AI (OpenAI Realtime API), AI gra klienta i ocenia zgodność ze skryptem, limit minut.
+- **1.1**: Symulator — głosowy trener AI (OpenAI Realtime API), AI gra klienta i ocenia zgodność ze skryptem, limit minut. Transkrypcja i ocena nagranych rozmów wg tej samej rubryki.
 - **2.0**: rankingi, konkursy, grafiki 3D awatarów.
 - **3.0**: Arena — interaktywne szkolenia na żywo (trener prowadzi sesję, uczestnicy odpowiadają na iPadach, ranking na żywo, wyniki do Akademii i Orbity).
 - **4.0**: integracja z bankiem i programem księgowym.
@@ -288,6 +332,13 @@ Wszystkie założenia z Etapu 0 są rozstrzygnięte:
 11. ✅ Potrącenie większe niż wypłata — reszta na kolejny okres; odejście osoby — ręcznie w Mennicy.
 12. ✅ Okresy — 1–15 i 16–koniec miesiąca (tabela wyżej).
 13. ✅ Statusy i zakresy — z prawdziwego CRM (sekcja CRM), tabele edytowalne.
+
+### Do decyzji — raportowanie w terenie i nagrania
+
+- Wzór KPI „Raportowanie (z aplikacji)” dla audytora. Rekomendacja: % aktywnych bloków w czasie pracy (blok aktywny = min. 1 odhaczony dom na 15 min), progi I–V bez zmian (85–100%).
+- Czy KPI „Raportowanie” dostają też handlowcy (dziś nie mają go w tabeli).
+- Jak łączyć lead z aplikacji z klientem w CRM przy regule „Nie ma w aplikacji = nie ma klienta”. Rekomendacja: po wysłaniu leadu do CRM zapisujemy jego ID klienta; do tego czasu dopasowanie po numerze telefonu + adresie, a wątpliwe przypadki → „Do wyjaśnienia”.
+- Dostawca rozpoznawania mowy / AI dla leadu głosem i transkrypcji.
 
 ### Do potwierdzenia przy integracji CRM
 
