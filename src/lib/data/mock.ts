@@ -5,8 +5,10 @@ import { MockCrm } from "@/lib/crm";
 import { buildMockData } from "@/lib/crm/mock-data";
 import { academyStages } from "@/lib/academy/content";
 import type { AcademyProgress, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
-import { recordYellowCard, type YellowCard } from "@/lib/domain/yellow-card";
-import type { AppClientData, DataSource, KpiInputs, SalesAttribution, SalesDecision } from "./types";
+import { recordEvent, type PersonEvent } from "@/lib/domain/cards";
+import type { PlanChange } from "@/lib/domain/safety";
+import { MOCK_EPOCH } from "@/lib/crm/mock-data";
+import type { AppClientData, DataSource, KpiInputs, SalesAttribution, SalesDecision, WorkLog } from "./types";
 
 const kpiInputs: Record<string, KpiInputs> = {
   "e-anna": { approvedFiveStarReviews: 2, reportingPct: 97, auditorKpi: null },
@@ -19,7 +21,7 @@ const kpiInputs: Record<string, KpiInputs> = {
 export class MockDataSource implements DataSource {
   readonly kind = "mock" as const;
   private readonly crmProvider = new MockCrm();
-  private yellowCards: YellowCard[] = [];
+  private discipline: PersonEvent[] = seedDiscipline();
   private adminAttributions: SalesAttribution[] = [];
   private decisions: SalesDecision[] = [];
   private academy = new Map<string, AcademyProgress>(seedAcademy());
@@ -48,8 +50,20 @@ export class MockDataSource implements DataSource {
     return 103;
   }
 
-  async saveYellowCard(card: YellowCard) {
-    this.yellowCards = recordYellowCard(this.yellowCards, card);
+  async addDisciplineEvent(event: PersonEvent) {
+    this.discipline = recordEvent(this.discipline, event);
+  }
+
+  async disciplineOf(personId: string) {
+    return this.discipline.filter((e) => e.personId === personId).sort((a, b) => b.at.localeCompare(a.at));
+  }
+
+  async auditorPlanHistory(userId: string): Promise<PlanChange[]> {
+    return planHistory[userId] ?? [];
+  }
+
+  async workLog(employeeId: string): Promise<WorkLog> {
+    return workLogs[employeeId] ?? { hoursThisMonth: 0, meetingsHeld: 0, meetingsRecorded: 0, days: [], today: { leads: 0, meetings: 0 } };
   }
 
   async appClientData(): Promise<AppClientData> {
@@ -84,9 +98,43 @@ export class MockDataSource implements DataSource {
     this.academy.set(userId, { ...p, attempts: [...p.attempts, attempt] });
   }
 
-  async yellowCardsOf(personId: string) {
-    return this.yellowCards.filter((c) => c.personId === personId);
-  }
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+const isoAgo = (days: number, hourUtc = 18) => {
+  const d = new Date(MOCK_EPOCH.getTime() - days * DAY);
+  d.setUTCHours(hourUtc, 0, 0, 0);
+  return d.toISOString();
+};
+const dayAgo = (days: number) => isoAgo(days).slice(0, 10);
+
+/** Ola na Safety od startu (bez zmian). Przykład historii zmian — w Wieży (Etap 3). */
+const planHistory: Record<string, PlanChange[]> = {};
+
+/** Dziennik pracy (testowy): Ola raz nie zamknęła dnia, nagrania poniżej 20% u Tomka. */
+const workLogs: Record<string, WorkLog> = {
+  "e-ola": {
+    hoursThisMonth: 96,
+    meetingsHeld: 14,
+    meetingsRecorded: 4,
+    days: [
+      { day: dayAgo(1), closedAt: isoAgo(1, 18) },
+      { day: dayAgo(2), closedAt: isoAgo(2, 17) },
+      { day: dayAgo(3), closedAt: null },
+    ],
+    today: { leads: 7, meetings: 0 },
+  },
+  "e-tomek": { hoursThisMonth: 80, meetingsHeld: 12, meetingsRecorded: 1, days: [], today: { leads: 0, meetings: 3 } },
+  "e-marek": { hoursThisMonth: 110, meetingsHeld: 9, meetingsRecorded: 3, days: [], today: { leads: 0, meetings: 2 } },
+  "e-anna": { hoursThisMonth: 120, meetingsHeld: 6, meetingsRecorded: 2, days: [], today: { leads: 0, meetings: 1 } },
+};
+
+/** Historia testowa: spóźnienie Marka i kartka managera. */
+function seedDiscipline(): PersonEvent[] {
+  return [
+    { personId: "e-marek", kind: "late", at: isoAgo(12, 7), by: "u-anna" },
+    { personId: "e-marek", kind: "yellow", reason: "no_gops", at: isoAgo(9, 15), by: "u-anna", automatic: false, note: "Klient bez zaświadczenia z GOPS na audycie" },
+  ];
 }
 
 /** Postęp testowy: Marek ma za sobą dwa etapy, Ola jeden. */

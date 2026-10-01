@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { seedConfig as config } from "@/lib/config/seed";
 import { activePlan, nextSafetyTier, safetyPay, validatePlanChange, type PlanChange } from "../safety";
-import { checkRedCard, yellowCard, type DisciplineEvent } from "../cards";
+import { checkRedCard, kpiYellowCard, noReportYellowCard, recordEvent, yellowCard, type DisciplineEvent } from "../cards";
+import { computeKpi } from "../kpi";
+import { computeSettlement, monthSettledIn, previousMonth, settlementPeriodFor } from "../settlement";
 import { dailyGoals, dayClosedInTime, recordingShare, upcomingBriefings } from "../rhythm";
 import { areaAssignmentCheck, leadMissingFields, type LeadDraft } from "../field";
 
@@ -63,7 +65,7 @@ describe("Safety — wypłata audytora wg pomiarów w miesiącu", () => {
 
 describe("kartki", () => {
   const now = new Date("2026-10-01T12:00:00Z");
-  const y = (reason: Parameters<typeof yellowCard>[0], at: string) => yellowCard(reason, "manager", new Date(at));
+  const y = (reason: Parameters<typeof yellowCard>[0], at: string) => yellowCard(reason, "manager", new Date(at), { note: "powód" });
 
   it("2 żółte kartki = czerwona", () => {
     const events: DisciplineEvent[] = [y("no_gops", "2026-09-01T10:00:00Z")];
@@ -94,6 +96,7 @@ describe("kartki", () => {
     expect(yellowCard("no_report", "system", now, { automatic: true }).kind).toBe("yellow");
     expect(() => yellowCard("client_pressure", "system", now, { automatic: true })).toThrow();
     expect(() => yellowCard("late", "", now)).toThrow();
+    expect(yellowCard("late", "m", now).reason).toBe("late");
   });
 });
 
@@ -157,5 +160,48 @@ describe("teren i leady", () => {
     expect(leadMissingFields(lead)).toEqual(["podpis zgody RODO", "potwierdzenie dla klienta (SMS lub e-mail)"]);
     expect(leadMissingFields({ ...lead, rodoSignature: "data:image/png;base64,x", confirmationChannel: "sms" })).toEqual([]);
     expect(leadMissingFields({ ...lead, rodoSignature: "x", confirmationChannel: "email" })).toEqual(["e-mail do potwierdzenia"]);
+  });
+});
+
+describe("kartki automatyczne i historia", () => {
+  const now = new Date("2026-10-01T12:00:00Z");
+  const weak = computeKpi(config.kpi.auditor, { unique_meetings: 2, leads_per_cycle: 5, company_target: 92, reporting: 80, crm_task_time: 72 }, config.kpiBands);
+  const ok = computeKpi(config.kpi.auditor, { unique_meetings: 4, leads_per_cycle: 12, company_target: 110, reporting: 100, crm_task_time: 0 }, config.kpiBands);
+
+  it("KPI < 30 → mnożnik 75%, alert i automatyczna żółta kartka (raz na okres)", () => {
+    expect(weak.score).toBeLessThan(30);
+    expect(weak.multiplier).toBe(0.75);
+    expect(weak.belowMinimum).toBe(true);
+    const card = kpiYellowCard("e-ola", weak, "2026-09-16", now);
+    expect(card).toMatchObject({ kind: "yellow", reason: "kpi_below_minimum", automatic: true });
+    let h = recordEvent([], card);
+    h = recordEvent(h, kpiYellowCard("e-ola", weak, "2026-09-16", now));
+    expect(h).toHaveLength(1);
+    expect(recordEvent(h, kpiYellowCard("e-ola", weak, "2026-10-01", now))).toHaveLength(2);
+    expect(kpiYellowCard("e-ola", ok, "2026-09-16", now)).toBeNull();
+  });
+
+  it("brak „Zamknij dzień” → automatyczna kartka „Brak raportu” (raz na dzień)", () => {
+    expect(noReportYellowCard("e-ola", "2026-09-30", true, now)).toBeNull();
+    const c = noReportYellowCard("e-ola", "2026-09-30", false, now);
+    expect(c).toMatchObject({ reason: "no_report", automatic: true, key: "day:2026-09-30" });
+    expect(recordEvent(recordEvent([], c), c)).toHaveLength(1);
+  });
+
+  it("kartka managera wymaga uzasadnienia", () => {
+    expect(() => yellowCard("no_gops", "m", now)).toThrow(/uzasadnienie/);
+    expect(yellowCard("no_gops", "m", now, { note: "Brak zaświadczenia" }).note).toBe("Brak zaświadczenia");
+  });
+});
+
+describe("Safety w rozliczeniu", () => {
+  it("Safety za miesiąc rozliczany w okresie z 1. dniem następnego miesiąca, bez drugiego mnożnika KPI", () => {
+    const period = settlementPeriodFor(new Date("2026-10-05T10:00:00Z"), config.settlementPeriods, tz);
+    expect(monthSettledIn("2026-09", period)).toBe(true);
+    expect(monthSettledIn("2026-10", period)).toBe(false);
+    expect(previousMonth("2026-01")).toBe("2025-12");
+    const s = computeSettlement({ commissions: 0, kpiMultiplier: 0.75, safetyPay: 5250 });
+    expect(s.lines.map((l) => l.key)).toEqual(["safety"]);
+    expect(s.payable).toBe(5250);
   });
 });

@@ -5,10 +5,13 @@ import { getDataSource } from "@/lib/data";
 import { fleetCost, type FleetResult } from "@/lib/domain/fleet";
 import { averageOfferSignDays, computeKpi, documentsOnTimeRate, fiveStarReviewRate, type KpiResult } from "@/lib/domain/kpi";
 import { formatPLN, roundMoney } from "@/lib/domain/money";
-import { computeSettlement, fleetDeductionForPeriod, type MonthlyFleetCost, type Settlement } from "@/lib/domain/settlement";
-import { yellowCardFor, type YellowCard } from "@/lib/domain/yellow-card";
+import { checkRedCard, kpiYellowCard, noReportYellowCard, type PersonEvent, type RedCardCheck } from "@/lib/domain/cards";
+import { dayClosedInTime, recordingShare } from "@/lib/domain/rhythm";
+import { activePlan, nextSafetyTier, safetyPay, type AuditorPlan, type SafetyPay } from "@/lib/domain/safety";
+import { computeSettlement, fleetDeductionForPeriod, monthSettledIn, previousMonth, type MonthlyFleetCost, type Settlement, type SettlementPeriod } from "@/lib/domain/settlement";
 import {
   auditorEntries,
+  auditorMeasurements,
   auditorLevelState,
   loadContext,
   monthKey,
@@ -45,11 +48,28 @@ export interface OrbitData {
   payout: { commission: number; multiplier: number; payout: number };
   /** Rozliczenie bieżącego okresu z pozycjami (m.in. „Flota”, „Korekty”). */
   settlement: Settlement & { fleetMonths: string[] };
-  yellowCards: YellowCard[];
+  /** Historia kartek (najnowsze pierwsze) i stan czerwonej kartki. */
+  discipline: { events: PersonEvent[]; red: RedCardCheck };
+  /** Nagrania: udział nagranych spotkań vs minimum z ustawień. */
+  recordings: { recorded: number; held: number; share: number; min: number; ok: boolean; missing: number };
+  /** Audytor: aktywny system wynagrodzenia. */
+  plan: AuditorPlanView | null;
   fleet: FleetResult | null;
   path: { level: number; title: string; requirement: string; reached: boolean; current: boolean }[];
   badges: { key: string; label: string; description: string; earned: boolean }[];
   earnings: Earnings;
+}
+
+export interface AuditorPlanView {
+  active: AuditorPlan;
+  /** Bieżący miesiąc (YYYY-MM). */
+  month: string;
+  measurements: number;
+  /** Safety za bieżący miesiąc (prognoza na dziś). */
+  safety: SafetyPay;
+  nextTier: { missing: number; base: number } | null;
+  /** „Ile zarobiłbyś na Next Level” w tym miesiącu (po mnożniku KPI). */
+  nextLevelPreview: number;
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -73,24 +93,37 @@ function monthlyFleetCosts(entries: CommissionEntry[], ctx: PortfolioContext): M
   return [...counts].map(([month, clients]) => ({ month, cost: fleetCost(clients, ctx.config.fleetBands).cost }));
 }
 
-function settlementFor(earnings: Earnings, kpi: KpiResult, fleetCosts: MonthlyFleetCost[]) {
+function settlementFor(earnings: Earnings, kpi: KpiResult, fleetCosts: MonthlyFleetCost[], safety?: number) {
   const fleet = fleetDeductionForPeriod(earnings.period, fleetCosts);
   const settlement = computeSettlement({
-    commissions: roundMoney(earnings.periodGreenTotal - earnings.periodDuoTopUps - earnings.periodSurchargeTopUps),
-    duoTopUps: earnings.periodDuoTopUps,
-    surchargeTopUps: earnings.periodSurchargeTopUps,
+    safetyPay: safety,
+    commissions: safety !== undefined ? 0 : roundMoney(earnings.periodGreenTotal - earnings.periodDuoTopUps - earnings.periodSurchargeTopUps),
+    duoTopUps: safety !== undefined ? 0 : earnings.periodDuoTopUps,
+    surchargeTopUps: safety !== undefined ? 0 : earnings.periodSurchargeTopUps,
     kpiMultiplier: kpi.multiplier,
-    deductions: earnings.periodDeductions,
+    deductions: safety !== undefined ? 0 : earnings.periodDeductions,
     fleetCost: fleet.total,
   });
   return { ...settlement, fleetMonths: fleet.months };
 }
 
-async function yellowCards(personId: string, kpi: KpiResult, earnings: Earnings, ctx: PortfolioContext): Promise<YellowCard[]> {
+/** Kartki automatyczne (KPI < 30, dzień bez „Zamknij dzień”) + historia osoby. */
+async function discipline(personId: string, kpi: KpiResult, earnings: Earnings, ctx: PortfolioContext): Promise<OrbitData["discipline"]> {
   const source = getDataSource();
-  const card = yellowCardFor(personId, kpi, new Date(`${earnings.period.startDay}T00:00:00Z`), ctx.now);
-  if (card) await source.saveYellowCard(card);
-  return source.yellowCardsOf(personId);
+  const { config, now } = ctx;
+  const log = await source.workLog(personId);
+  const automatic = [
+    kpiYellowCard(personId, kpi, earnings.period.startDay, now),
+    ...log.days.map((d) => noReportYellowCard(personId, d.day, dayClosedInTime(d.day, d.closedAt ? new Date(d.closedAt) : null, config.rhythm, config.timeZone), now)),
+  ];
+  for (const card of automatic) if (card) await source.addDisciplineEvent(card);
+  const events = await source.disciplineOf(personId);
+  return { events, red: checkRedCard(events, config.cards, now) };
+}
+
+async function recordings(personId: string, role: "auditor" | "sales", ctx: PortfolioContext): Promise<OrbitData["recordings"]> {
+  const log = await getDataSource().workLog(personId);
+  return { recorded: log.meetingsRecorded, held: log.meetingsHeld, ...recordingShare(log.meetingsRecorded, log.meetingsHeld, role, ctx.config.rhythm) };
 }
 
 async function auditorKpi(employeeId: string, ctx: PortfolioContext): Promise<KpiResult> {
@@ -161,7 +194,9 @@ export async function getOrbitData(user: AppUser, now = new Date(), context?: Po
       kpi: { ...kpi, units: Object.fromEntries(config.kpi.sales.map((k) => [k.key, k.unit])) },
       payout: { commission: earnings.periodGreenTotal, multiplier: kpi.multiplier, payout: settlement.payable },
       settlement,
-      yellowCards: await yellowCards(employeeId, kpi, earnings, ctx),
+      discipline: await discipline(employeeId, kpi, earnings, ctx),
+      recordings: await recordings(employeeId, "sales", ctx),
+      plan: null,
       fleet: user.hasCompanyCar ? fleetCost(monthClients, config.fleetBands) : null,
       path: config.salesLevels.map((l) => ({
         level: l.level,
@@ -181,7 +216,8 @@ export async function getOrbitData(user: AppUser, now = new Date(), context?: Po
   const entries = auditorEntries(employeeId, ctx, state.timeline, lp.current.level);
   const earnings = summarize(entries, ctx);
   const kpi = await auditorKpi(employeeId, ctx);
-  const settlement = settlementFor(earnings, kpi, []);
+  const plan = await auditorPlan(user, employeeId, kpi, entries, earnings.period, ctx);
+  const settlement = settlementFor(earnings, kpi, [], plan.active === "safety" ? plan.closedMonthPay ?? 0 : undefined);
 
   return {
     track: "auditor",
@@ -202,7 +238,9 @@ export async function getOrbitData(user: AppUser, now = new Date(), context?: Po
     kpi: { ...kpi, units: Object.fromEntries(config.kpi.auditor.map((k) => [k.key, k.unit])) },
     payout: { commission: earnings.periodGreenTotal, multiplier: kpi.multiplier, payout: settlement.payable },
     settlement,
-    yellowCards: await yellowCards(employeeId, kpi, earnings, ctx),
+    discipline: await discipline(employeeId, kpi, earnings, ctx),
+    recordings: await recordings(employeeId, "auditor", ctx),
+    plan: plan.view,
     fleet: null,
     path: config.auditorLevels.map((l) => ({
       level: l.level,
@@ -214,4 +252,35 @@ export async function getOrbitData(user: AppUser, now = new Date(), context?: Po
     badges: badges(config, { clients: state.own, kpiMultiplier: kpi.multiplier, level: lp.current.level }),
     earnings,
   };
+}
+
+/**
+ * System audytora: Safety (miesięcznie wg pomiarów) albo Next Level (tabela poziomów).
+ * Safety za miesiąc wypłacamy w okresie z pierwszym dniem następnego miesiąca.
+ */
+async function auditorPlan(user: AppUser, employeeId: string, kpi: KpiResult, entries: CommissionEntry[], period: SettlementPeriod, ctx: PortfolioContext) {
+  const source = getDataSource();
+  const { config, now } = ctx;
+  const [history, log] = await Promise.all([source.auditorPlanHistory(user.id), source.workLog(employeeId)]);
+  const active = activePlan(history, now);
+  const measured = auditorMeasurements(employeeId, ctx);
+  const month = monthKey(now, ctx);
+  const inMonth = (m: string) => measured.filter((x) => monthKey(x.at, ctx) === m);
+  const contractType = user.contract?.type ?? "B2B";
+  const pay = (m: string, hours: number) => safetyPay(inMonth(m).length, config.safety, { contractType, hoursWorked: hours, kpiMultiplier: kpi.multiplier });
+  const current = pay(month, log.hoursThisMonth);
+  const clientsThisMonth = new Set(inMonth(month).map((x) => x.clientId));
+  const preview = entries.filter((e) => clientsThisMonth.has(e.clientId) && (e.state === "green" || e.state === "grey")).reduce((sum, e) => sum + e.amount, 0);
+  // Zamknięty miesiąc w bieżącym okresie (godziny poprzedniego miesiąca — dziś brak danych → 0).
+  const prev = previousMonth(month);
+  const closedMonthPay = active === "safety" && monthSettledIn(prev, period) ? pay(prev, 0).total : null;
+  const view: AuditorPlanView = {
+    active,
+    month,
+    measurements: current.measurements,
+    safety: current,
+    nextTier: nextSafetyTier(current.measurements, config.safety),
+    nextLevelPreview: roundMoney(preview * kpi.multiplier),
+  };
+  return { active, view, closedMonthPay };
 }

@@ -78,10 +78,12 @@ export interface SettlementInput {
   deductions?: number;
   /** Koszt auta firmowego do potrącenia. */
   fleetCost?: number;
+  /** Wypłata Safety (audytor) za zamknięty miesiąc — już po mnożniku KPI. */
+  safetyPay?: number;
 }
 
 export interface SettlementLine {
-  key: "commissions" | "duoTopUps" | "surchargeTopUps" | "kpi" | "additions" | "deductions" | "fleet";
+  key: "commissions" | "duoTopUps" | "surchargeTopUps" | "kpi" | "safety" | "additions" | "deductions" | "fleet";
   label: string;
   /** Kwota ze znakiem: dodatnia zwiększa, ujemna zmniejsza wypłatę. */
   amount: number;
@@ -108,15 +110,17 @@ export function computeSettlement(input: SettlementInput): Settlement {
   const gross = roundMoney(commissions + duoTopUps + surchargeTopUps);
   const afterKpi = roundMoney(gross * input.kpiMultiplier);
   const additions = roundMoney(input.additions ?? 0);
+  const safety = roundMoney(input.safetyPay ?? 0);
   const deductions = roundMoney(input.deductions ?? 0);
   const fleet = roundMoney(input.fleetCost ?? 0);
-  const net = roundMoney(afterKpi + additions - deductions - fleet);
-  const lines: SettlementLine[] = [{ key: "commissions", label: "Prowizje", amount: commissions }];
+  const net = roundMoney(afterKpi + safety + additions - deductions - fleet);
+  const lines: SettlementLine[] = input.safetyPay !== undefined && !gross ? [] : [{ key: "commissions", label: "Prowizje", amount: commissions }];
   if (duoTopUps) lines.push({ key: "duoTopUps", label: "Dopłaty do Duetu", amount: duoTopUps });
   if (surchargeTopUps) lines.push({ key: "surchargeTopUps", label: "Dopłaty nadmarży", amount: surchargeTopUps });
   if (afterKpi !== gross) {
     lines.push({ key: "kpi", label: `Mnożnik KPI ${Math.round(input.kpiMultiplier * 100)}%`, amount: roundMoney(afterKpi - gross) });
   }
+  if (input.safetyPay !== undefined) lines.push({ key: "safety", label: "Safety (za miesiąc)", amount: safety });
   if (additions) lines.push({ key: "additions", label: "Dodatki", amount: additions });
   if (deductions) lines.push({ key: "deductions", label: "Potrącenia (status negatywny)", amount: -deductions });
   if (fleet) lines.push({ key: "fleet", label: "Flota", amount: -fleet });
@@ -144,15 +148,22 @@ export interface MonthlyFleetCost {
  * pierwszy dzień następnego miesiąca.
  */
 export function fleetDeductionForPeriod(period: SettlementPeriod, costs: readonly MonthlyFleetCost[]): { total: number; months: string[] } {
-  const months: string[] = [];
-  let total = 0;
-  for (const { month, cost } of costs) {
-    const [y, m] = month.split("-").map(Number);
-    const firstDayAfter = m === 12 ? dayKey(y + 1, 1, 1) : dayKey(y, m + 1, 1);
-    if (firstDayAfter >= period.startDay && firstDayAfter <= period.endDay) {
-      months.push(month);
-      total += cost;
-    }
-  }
-  return { total: roundMoney(total), months };
+  const months = costs.filter((c) => monthSettledIn(c.month, period));
+  return { total: roundMoney(months.reduce((s, c) => s + c.cost, 0)), months: months.map((c) => c.month) };
+}
+
+/**
+ * Miesiąc (YYYY-MM) rozliczany w danym okresie — w okresie, który zawiera pierwszy dzień
+ * następnego miesiąca (koszt floty, wypłata Safety).
+ */
+export function monthSettledIn(month: string, period: SettlementPeriod): boolean {
+  const [y, m] = month.split("-").map(Number);
+  const firstDayAfter = m === 12 ? dayKey(y + 1, 1, 1) : dayKey(y, m + 1, 1);
+  return firstDayAfter >= period.startDay && firstDayAfter <= period.endDay;
+}
+
+/** Poprzedni miesiąc (YYYY-MM). */
+export function previousMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${pad(m - 1)}`;
 }

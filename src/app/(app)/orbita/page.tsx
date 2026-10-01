@@ -3,8 +3,10 @@ import { AvatarRing } from "@/components/orbit/AvatarRing";
 import { KpiPanel } from "@/components/orbit/KpiPanel";
 import { LevelPath } from "@/components/orbit/LevelPath";
 import { PeriodEarnings } from "@/components/orbit/PeriodEarnings";
+import { DisciplineCard, PlanCard, RecordingsCard } from "@/components/orbit/RulesCards";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
+import { getDataSource } from "@/lib/data";
 import { formatPLN } from "@/lib/domain/money";
 import { getOrbitData } from "@/lib/services/orbit";
 
@@ -20,7 +22,7 @@ function plural(n: number, one: string, few: string, many: string) {
 
 export default async function OrbitaPage() {
   const user = await requireRole(["auditor", "sales", "manager"]);
-  const data = await getOrbitData(user);
+  const [data, config] = await Promise.all([getOrbitData(user), getDataSource().getConfig()]);
 
   if (!data) {
     return (
@@ -82,6 +84,12 @@ export default async function OrbitaPage() {
             periodLabel={periodLabel}
           />
         </Card>
+
+        {data.plan && (
+          <div className="lg:col-span-12">
+            <PlanCard plan={data.plan} />
+          </div>
+        )}
 
         {/* KPI */}
         <Card className="lg:col-span-7 lg:row-span-2">
@@ -175,6 +183,11 @@ export default async function OrbitaPage() {
               )}
             </Card>
           )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:col-span-12 lg:grid-cols-2">
+          <DisciplineCard discipline={data.discipline} labels={config.cards.yellowReasons} />
+          <RecordingsCard rec={data.recordings} />
         </div>
 
         {/* Ścieżka poziomów */}

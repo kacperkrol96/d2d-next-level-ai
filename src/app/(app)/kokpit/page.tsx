@@ -3,7 +3,10 @@ import { AlertTriangle, ChevronRight, Radar as RadarIcon } from "lucide-react";
 import { StartDayButton } from "@/components/kokpit/StartDayButton";
 import { Avatar } from "@/components/orbit/Avatar";
 import { Card, CardTitle } from "@/components/ui/Card";
+import { DailyGoalCard } from "@/components/kokpit/DailyGoalCard";
 import { requireUser } from "@/lib/auth/session";
+import { getDataSource } from "@/lib/data";
+import { dailyGoals, upcomingBriefings } from "@/lib/domain/rhythm";
 import { formatPLN } from "@/lib/domain/money";
 import { getOrbitData } from "@/lib/services/orbit";
 import { loadContext, offersWaiting } from "@/lib/services/portfolio";
@@ -12,6 +15,12 @@ import { OfficeMovesList } from "@/components/trajectory/OfficeMovesList";
 
 const dayFmt = new Intl.DateTimeFormat("pl-PL", { weekday: "long", day: "numeric", month: "long" });
 
+/** „YYYY-MM-DD HH:MM” w czasie polskim. */
+function localNow(date: Date, timeZone: string) {
+  const p = new Intl.DateTimeFormat("sv-SE", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+  return p.slice(0, 16);
+}
+
 export default async function KokpitPage() {
   const user = await requireUser();
   const ctx = await loadContext();
@@ -19,8 +28,16 @@ export default async function KokpitPage() {
   const firstName = user.name.split(" ")[0];
   const offers = user.track === "sales" && user.crmEmployeeId ? offersWaiting(user.crmEmployeeId, ctx) : [];
 
+  const { config, now } = ctx;
+  const log = user.crmEmployeeId ? await getDataSource().workLog(user.crmEmployeeId) : null;
+  const goal = user.track ? dailyGoals(user.track, now, config.rhythm, config.timeZone) : null;
+  const done: Record<string, number> = log ? { "Umówione leady": log.today.leads, "Odbyte spotkania": log.today.meetings } : {};
+  const briefing = upcomingBriefings(now, 3, config.rhythm, config.timeZone).find((b) => `${b.day} ${b.time}` >= localNow(now, config.timeZone));
+
   const alerts: string[] = [];
+  if (orbit?.discipline.red.red) alerts.push("Czerwona kartka — umów rozmowę z managerem (szczegóły w Orbicie).");
   if (orbit?.kpi.belowMinimum) alerts.push("Wynik KPI poniżej minimum — mnożnik 75%, manager dostał alert, żółta kartka zapisana w historii.");
+  if (orbit && !orbit.recordings.ok) alerts.push(`Nagrania: ${Math.round(orbit.recordings.share * 100)}% spotkań — minimum ${Math.round(orbit.recordings.min * 100)}%.`);
   const weakKpi = orbit?.kpi.items.filter((k) => k.value !== null && k.level <= 1) ?? [];
   for (const k of weakKpi) alerts.push(`KPI „${k.label}” na poziomie ${k.level === 0 ? "poniżej I" : "I"} — zobacz Orbitę.`);
 
@@ -40,6 +57,16 @@ export default async function KokpitPage() {
       </header>
 
       <StartDayButton />
+
+      {goal && (
+        <DailyGoalCard goal={goal} done={done} week={user.track === "auditor" ? config.rhythm.auditor.week : undefined} />
+      )}
+      {briefing && (
+        <p className="-mt-1 px-1 text-xs text-muted">
+          Najbliższa odprawa: <span className="text-white">{briefing.title}</span> · {briefing.day === localNow(now, config.timeZone).slice(0, 10) ? "dziś" : briefing.day} {briefing.time} ·{" "}
+          {briefing.place} · „Zamknij dzień” do {config.rhythm.closeDayDeadline}
+        </p>
+      )}
 
       {orbit && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

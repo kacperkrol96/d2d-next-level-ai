@@ -2,7 +2,8 @@ import type { AcademyProgress, AcademyStage, AcademyTrack, ExamAttempt } from "@
 import type { AppUser } from "@/lib/auth/users";
 import type { AppConfig, IncomeTier } from "@/lib/config/types";
 import type { CrmProvider } from "@/lib/crm/types";
-import type { YellowCard } from "@/lib/domain/yellow-card";
+import type { PersonEvent } from "@/lib/domain/cards";
+import type { PlanChange } from "@/lib/domain/safety";
 
 /** Dane do KPI, których nie liczymy z CRM (opinie 5★ z Wieży, aktywność audytora). */
 export interface KpiInputs {
@@ -44,6 +45,19 @@ export interface SalesAttribution {
   note?: string;
 }
 
+/** Dziennik pracy z aplikacji (Terytorium / Misje; dziś dane testowe). */
+export interface WorkLog {
+  /** Godziny pracy w bieżącym miesiącu (aktywne bloki) — minimum dla umowy zlecenia. */
+  hoursThisMonth: number;
+  /** Spotkania odbyte / nagrane w bieżącym miesiącu. */
+  meetingsHeld: number;
+  meetingsRecorded: number;
+  /** Dni pracy i godzina „Zamknij dzień” (ISO, null = nie zamknięto). */
+  days: { day: string; closedAt: string | null }[];
+  /** Dzisiejszy postęp (umówione leady / odbyte spotkania). */
+  today: { leads: number; meetings: number };
+}
+
 /** Wpis w historii potwierdzeń handlowca (Zarząd / Admin): kto, kiedy, poprzednia wartość. */
 export interface SalesDecision {
   clientId: string;
@@ -82,7 +96,12 @@ export interface DataSource {
   kpiInputs(employeeId: string): Promise<KpiInputs>;
   /** Realizacja targetu spółki w bieżącym miesiącu (%), target wpisuje admin. */
   companyTargetPct(): Promise<number>;
-  saveYellowCard(card: YellowCard): Promise<void>;
+  /** Kartki i zdarzenia dyscyplinarne (żółte, spóźnienia, nieobecności) — historia osoby. */
+  addDisciplineEvent(event: PersonEvent): Promise<void>;
+  disciplineOf(personId: string): Promise<PersonEvent[]>;
+  /** Historia systemu wynagrodzenia audytora (Safety / Next Level). */
+  auditorPlanHistory(userId: string): Promise<PlanChange[]>;
+  workLog(employeeId: string): Promise<WorkLog>;
   appClientData(): Promise<AppClientData>;
   /** Admin potwierdza handlowca (np. podpowiedź z inicjałów) jednym kliknięciem. */
   confirmSalesPerson(decision: SalesDecision): Promise<void>;
@@ -93,5 +112,4 @@ export interface DataSource {
   academyProgress(userId: string): Promise<AcademyProgress>;
   markLessonDone(userId: string, lessonId: string): Promise<void>;
   saveExamAttempt(userId: string, attempt: ExamAttempt): Promise<void>;
-  yellowCardsOf(personId: string): Promise<YellowCard[]>;
 }

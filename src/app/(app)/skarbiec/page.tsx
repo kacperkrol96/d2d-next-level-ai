@@ -81,6 +81,11 @@ export default async function SkarbiecPage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader title="Skarbiec" subtitle="Prowizje za klienta — kliknij klienta, by zobaczyć drogę jego umów" />
       <SkarbiecTabs active="prowizje" />
+      {orbit.plan?.active === "safety" && (
+        <p className="mb-4 rounded-2xl bg-accent/10 px-4 py-3 text-sm">
+          Jesteś na systemie <b>Safety</b> — wypłata zależy od liczby pomiarów w miesiącu (Orbita). Kwoty przy klientach poniżej to podgląd stawek Next Level.
+        </p>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-4">
         <Card>

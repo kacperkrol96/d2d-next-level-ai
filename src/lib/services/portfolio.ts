@@ -287,6 +287,17 @@ export function auditorEntries(employeeId: string, ctx: PortfolioContext, timeli
   return entries;
 }
 
+/**
+ * Pomiary audytora (Safety): audyt, który doszedł do „DOKUMENTACJA POMIAROWA” lub dalej
+ * (kategoria szara albo zielona audytora) — z datą wejścia.
+ */
+export function auditorMeasurements(employeeId: string, ctx: PortfolioContext): { clientId: string; at: Date }[] {
+  return ctx.clients
+    .filter((rc) => rc.auditorId === employeeId && rc.auditAgreement && !isBlocked(rc, "auditor"))
+    .map((rc) => ({ clientId: rc.client.id, at: reachedCategoryAt(rc.auditAgreement!.agreement, ["auditor_grey", "auditor_earned"], ctx.config.crm) }))
+    .filter((m): m is { clientId: string; at: Date } => m.at !== null);
+}
+
 // ------------------------------------------------------------------ wspólne
 
 function issueText(rc: ResolvedClient, role: "sales" | "auditor"): string {

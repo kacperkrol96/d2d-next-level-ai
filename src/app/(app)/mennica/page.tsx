@@ -149,8 +149,10 @@ export default async function MennicaPage() {
             <Card key={user.id}>
               <CardTitle hint={`${roleLabels[user.role]} · ${user.contract?.type ?? "—"}`}>{user.name}</CardTitle>
               <SettlementLines lines={orbit.settlement.lines} payable={orbit.settlement.payable} carryOver={orbit.settlement.carryOver} fleetMonths={orbit.settlement.fleetMonths} />
-              {orbit.yellowCards.length > 0 && (
-                <p className="mt-3 rounded-2xl bg-gold/[0.08] px-4 py-2 text-xs text-gold">Żółte kartki w historii: {orbit.yellowCards.length}</p>
+              {orbit.discipline.events.some((e) => e.kind === "yellow") && (
+                <p className={`mt-3 rounded-2xl px-4 py-2 text-xs ${orbit.discipline.red.red ? "bg-danger/10 text-danger" : "bg-gold/[0.08] text-gold"}`}>
+                  {orbit.discipline.red.red ? "Czerwona kartka · " : ""}Żółte kartki w historii: {orbit.discipline.events.filter((e) => e.kind === "yellow").length}
+                </p>
               )}
             </Card>
           ) : null,
