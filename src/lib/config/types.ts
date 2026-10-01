@@ -73,23 +73,13 @@ export interface FleetBand {
 }
 
 export interface CommissionRules {
-  /** Status sprzedażowy, od którego prowizja handlowca jest zielona. */
-  salesGreenFromStatus: string;
-  /** Status umowy audytowej, od którego prowizja audytora jest zielona. */
-  auditorGreenFromStatus: string;
-  /** Status sprzedażowy, od którego audytor dostaje bonus za zamknięcie. */
-  auditorClosingBonusFromStatus: string;
-  /** Obniżka prowizji dla umowy „sam VAT” (0.75 = −75%). */
+  /** Obniżka prowizji dla klienta „sam VAT” (0.75 = −75%). */
   samVatReduction: number;
-  /** Limit nadmarży jako udział wartości umowy netto (0.10 = 10%). */
+  /** Limit nadmarży jako udział wartości netto umów termo + źródło ciepła (0.10 = 10%). */
   surchargeCapShare: number;
-  /** Długość okresu rozliczeniowego w dniach. */
-  settlementPeriodDays: number;
-  /** Data startu pierwszego okresu rozliczeniowego (YYYY-MM-DD). */
-  settlementAnchorDate: string;
   /** Oferta niepodpisana po tylu dniach wchodzi do średniej z tą wartością. */
   offerSignCapDays: number;
-  /** Limit godzin na komplet dokumentów od podpisania umowy. */
+  /** Okno (godziny) na komplet dokumentów od podpisania umowy — KPI handlowiec + biuro. */
   documentsDeadlineHours: number;
   /**
    * Od tego poziomu handlowca do progów awansu wliczają się klienci
@@ -98,28 +88,85 @@ export interface CommissionRules {
   salesStructureCountsFromLevel: number;
 }
 
-/**
- * Rodzaje umów z CRM przypisane do kategorii. Solo = klient ma umowę
- * tylko z jednej kategorii; Duet = termomodernizacja + źródło ciepła.
- */
-export interface AgreementCategories {
-  thermo: string[];
-  heatSource: string[];
+/** Reguła „sam VAT”: klient na wskazanym progu dochodowym i bez umowy REK. */
+export interface SamVatRule {
+  enabled: boolean;
+  incomeTier: IncomeTier;
 }
 
-export interface Pipelines {
-  /** Statusy sprzedażowe klienta w kolejności procesu. */
-  sales: string[];
-  /** Statusy umowy audytowej w kolejności procesu. */
-  audit: string[];
-  /** Statusy kończące współpracę (rezygnacja itp.). */
-  cancelled: string[];
-  /** Statusy-kamienie milowe używane w KPI (nazwy jak w CRM). */
+/** Termin liczony od miesiąca, w którym kończy się okres (0 = ten sam, 1 = następny). */
+export interface MonthDay {
+  monthOffset: number;
+  day: number;
+}
+
+/** Okres rozliczeniowy w miesiącu, np. 1–15 i 16–koniec. */
+export interface SettlementPeriodRule {
+  fromDay: number;
+  /** null = ostatni dzień miesiąca */
+  toDay: number | null;
+  /** Termin rozliczenia/akceptacji. */
+  settleBy: MonthDay;
+  /** Dzień wypłaty. */
+  payoutOn: MonthDay;
+}
+
+// ------------------------------------------------------------------ CRM (RRUP)
+
+/** Zakres umowy rozpoznany z końcówki numeru. */
+export type AgreementScope = "thermo" | "heatSource" | "rek" | "audit";
+
+/** Tabela: końcówka numeru → zakres (bez względu na wielkość liter). */
+export interface ScopeCode {
+  codes: string[];
+  scope: AgreementScope;
+  label: string;
+}
+
+/** Tabela: inicjały z numeru umowy → osoba (awaryjne źródło handlowca). */
+/**
+ * Tabela: inicjały z numeru umowy → osoba. TYLKO podpowiedź w kolejce
+ * „Do wyjaśnienia” (inicjały są zawodne: RS ≠ RSZ) — nigdy automatyczne
+ * przypisanie prowizji. Dopasowanie najdłuższego prefiksu.
+ */
+export interface InitialsCode {
+  code: string;
+  personName: string;
+  /** Konto w aplikacji (null = osoba jeszcze bez konta / nieznana). */
+  employeeId: string | null;
+  note?: string;
+}
+
+export type StatusCategory = "in_progress" | "sales_earned" | "auditor_grey" | "auditor_earned" | "negative";
+
+/** Ścieżka statusów jednego typu umowy + tabela status → kategoria. */
+export interface AgreementTypeConfig {
+  name: string;
+  /** Statusy w kolejności procesu (z negatywnymi w miejscu, w którym występują). */
+  path: string[];
+  /** Status → kategoria (edytuje admin). */
+  categories: Record<string, StatusCategory>;
+}
+
+export interface CrmRules {
+  scopeCodes: ScopeCode[];
+  initials: InitialsCode[];
+  agreementTypes: AgreementTypeConfig[];
+  /** Status zawierający którykolwiek znacznik = zawsze „negatywny”. */
+  negativeMarkers: string[];
+  /** Statusy pomijane (np. „WYLICZENIE PROWIZJI” — znika z CRM). */
+  ignoredStatuses: string[];
+  /** Kamienie milowe do KPI i Radaru (nazwy jak w CRM). */
   milestones: {
-    offerHandedOver: string;
+    /** Podpisanie umowy sprzedażowej. */
     contractSigned: string;
+    /** Pierwszy pozytywny status po weryfikacji — koniec okna „komplet dokumentów”. */
     documentsComplete: string;
+    /** Wejście umowy audytowej (/A) w ten status = start Radaru i KPI czasu podpisania. */
+    offerHandedOver: string;
   };
+  /** Co ile minut odświeżać dane z CRM w otwartej aplikacji. */
+  refreshMinutes: number;
 }
 
 export interface BadgeDefinition {
@@ -129,6 +176,23 @@ export interface BadgeDefinition {
   /** Miara, od której zależy zdobycie odznaki. */
   metric: "clients" | "kpiMultiplier" | "level";
   min: number;
+}
+
+/** Walidacja wag KPI w panelu admina. */
+export interface KpiWeightRules {
+  /** Wymagana suma wag (np. 20 → max 100 pkt). */
+  total: number;
+  /** Minimalna waga pojedynczego KPI. */
+  min: number;
+}
+
+/**
+ * Reguła „Nie ma w aplikacji = nie ma klienta”: prowizja i awans tylko dla klientów
+ * z leadem założonym w aplikacji przed umową. Przed datą — tylko ostrzeżenie.
+ */
+export interface AppLeadRule {
+  /** Data (YYYY-MM-DD), od której reguła blokuje; null = tylko ostrzeżenia. */
+  enforceFrom: string | null;
 }
 
 export interface AppConfig {
@@ -141,7 +205,12 @@ export interface AppConfig {
   kpiBands: KpiBand[];
   fleetBands: FleetBand[];
   rules: CommissionRules;
-  pipelines: Pipelines;
   badges: BadgeDefinition[];
-  agreementCategories: AgreementCategories;
+  kpiWeightRules: KpiWeightRules;
+  appLeadRule: AppLeadRule;
+  samVat: SamVatRule;
+  /** Strefa czasowa firmy — daty okresów liczymy w czasie polskim. */
+  timeZone: string;
+  settlementPeriods: SettlementPeriodRule[];
+  crm: CrmRules;
 }

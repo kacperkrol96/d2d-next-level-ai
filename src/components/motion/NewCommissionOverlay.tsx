@@ -7,6 +7,9 @@ import { MoneyCounter } from "./MoneyCounter";
 import { useTickSound } from "./useTickSound";
 
 export const REPLAY_EVENT = "nle:replay-commission";
+export const OVERLAY_CLOSED_EVENT = "nle:overlay-closed";
+/** Czy trwa animacja prowizji — inne efekty czekają (jeden efekt naraz). */
+export const overlayState = { active: false };
 
 interface Props {
   userId: string;
@@ -37,6 +40,7 @@ export function NewCommissionOverlay({ userId, earnedTotal, latest }: Props) {
     setLabel(name);
     setPlayKey((k) => k + 1);
     setPhase("counting");
+    overlayState.active = true;
   }, []);
 
   useEffect(() => {
@@ -86,7 +90,12 @@ export function NewCommissionOverlay({ userId, earnedTotal, latest }: Props) {
           exit={{ opacity: 0 }}
           transition={{ duration: phase === "flying" ? 0.6 : 0.25, delay: phase === "flying" ? 0.15 : 0 }}
           onClick={() => phase === "counting" && flyAway()}
-          onAnimationComplete={() => phase === "flying" && setPhase("hidden")}
+          onAnimationComplete={() => {
+            if (phase !== "flying") return;
+            setPhase("hidden");
+            overlayState.active = false;
+            window.dispatchEvent(new Event(OVERLAY_CLOSED_EVENT));
+          }}
         >
           <button
             type="button"

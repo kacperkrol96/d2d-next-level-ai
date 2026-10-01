@@ -3,10 +3,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE } from "./session";
-import { findDemoUser } from "./users";
+import { getDataSource } from "@/lib/data";
 
 export async function demoLogin(formData: FormData) {
-  const user = findDemoUser(String(formData.get("userId") ?? ""));
+  const user = await getDataSource().findUser(String(formData.get("userId") ?? ""));
   if (!user) redirect("/login");
   const store = await cookies();
   store.set(SESSION_COOKIE, user.id, {

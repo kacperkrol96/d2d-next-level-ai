@@ -106,3 +106,47 @@ export function auditorLevelFor(input: AuditorLevelInput, levels: readonly Audit
     progress: Math.min(clientProgress, peopleProgress),
   };
 }
+
+// ------------------------------------------------------------------ poziom w czasie
+
+export interface ClientEvent {
+  /** Kiedy klient zaczął się liczyć (prowizja zielona). */
+  at: Date;
+  /** Kiedy przestał (rezygnacja / status negatywny) — odejmuje klienta z licznika. */
+  droppedAt?: Date | null;
+  /** Klient z zespołu (nie własny). */
+  structure: boolean;
+}
+
+/**
+ * Historia poziomu: poziom w chwili `t` to najwyższy poziom osiągnięty przed `t`
+ * (rezygnacja odejmuje klienta z licznika, ale zdobyty poziom zostaje).
+ * Służy do stawki „według poziomu z chwili, gdy prowizja zrobiła się zielona”.
+ */
+export function levelTimeline(
+  events: readonly ClientEvent[],
+  levelFor: (own: number, structure: number) => number,
+  initialLevel = 1,
+): (t: Date) => number {
+  const points = [...new Set(events.flatMap((e) => [e.at.getTime(), ...(e.droppedAt ? [e.droppedAt.getTime()] : [])]))].sort((a, b) => a - b);
+  const reached: { time: number; level: number }[] = [];
+  let best = initialLevel;
+  for (const time of points) {
+    let own = 0;
+    let structure = 0;
+    for (const e of events) {
+      const counted = e.at.getTime() <= time && (!e.droppedAt || e.droppedAt.getTime() > time);
+      if (counted) {
+        if (e.structure) structure++;
+        else own++;
+      }
+    }
+    best = Math.max(best, levelFor(own, structure));
+    reached.push({ time, level: best });
+  }
+  return (t: Date) => {
+    let level = initialLevel;
+    for (const r of reached) if (r.time < t.getTime()) level = r.level;
+    return level;
+  };
+}

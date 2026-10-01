@@ -6,15 +6,18 @@ import { Card, CardTitle } from "@/components/ui/Card";
 import { requireUser } from "@/lib/auth/session";
 import { formatPLN } from "@/lib/domain/money";
 import { getOrbitData } from "@/lib/services/orbit";
-import { getConfig } from "@/lib/config";
+import { loadContext, offersWaiting } from "@/lib/services/portfolio";
+import { getOfficeMoves } from "@/lib/services/trajectory";
+import { OfficeMovesList } from "@/components/trajectory/OfficeMovesList";
 
 const dayFmt = new Intl.DateTimeFormat("pl-PL", { weekday: "long", day: "numeric", month: "long" });
 
 export default async function KokpitPage() {
   const user = await requireUser();
-  const [orbit, config] = await Promise.all([getOrbitData(user), getConfig()]);
+  const ctx = await loadContext();
+  const [orbit, moves] = await Promise.all([getOrbitData(user, ctx.now, ctx), getOfficeMoves(user, 7, ctx)]);
   const firstName = user.name.split(" ")[0];
-  const offers = orbit?.earnings.entries.filter((e) => e.status === config.pipelines.milestones.offerHandedOver) ?? [];
+  const offers = user.track === "sales" && user.crmEmployeeId ? offersWaiting(user.crmEmployeeId, ctx) : [];
 
   const alerts: string[] = [];
   if (orbit?.kpi.belowMinimum) alerts.push("Wynik KPI poniżej minimum — mnożnik 75%, manager dostał alert, żółta kartka zapisana w historii.");
@@ -72,7 +75,7 @@ export default async function KokpitPage() {
             <ul className="flex flex-col gap-2">
               {offers.map((o) => (
                 <li key={o.clientId}>
-                  <Link href="/radar" className="flex items-center justify-between rounded-2xl bg-card-2 px-4 py-3">
+                  <Link href={`/skarbiec/klient/${o.clientId}`} className="flex items-center justify-between rounded-2xl bg-card-2 px-4 py-3">
                     <span>
                       <span className="block text-sm">{o.clientName}</span>
                       <span className="block text-xs text-muted">{o.city}</span>
@@ -104,6 +107,12 @@ export default async function KokpitPage() {
           )}
         </Card>
       </div>
+      {user.track && (
+        <Card>
+          <CardTitle hint="ostatnie 7 dni">Ruchy biura</CardTitle>
+          <OfficeMovesList moves={moves} limit={4} />
+        </Card>
+      )}
     </div>
   );
 }

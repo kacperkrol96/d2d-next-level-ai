@@ -10,6 +10,7 @@ export type PanelKey =
   | "akademia"
   | "konfigurator"
   | "wieza"
+  | "konstelacja"
   | "mennica";
 
 export interface NavItem {
@@ -34,6 +35,7 @@ export const navItems: NavItem[] = [
   { key: "akademia", label: "Akademia", href: "/akademia", description: "Onboarding i egzaminy", roles: everyone, mobileBar: false },
   { key: "konfigurator", label: "Konfigurator", href: "/konfigurator", description: "Kalkulator ofertowy", roles: ["sales", "manager", "admin"], mobileBar: false },
   { key: "wieza", label: "Wieża", href: "/wieza", description: "Panel managera", roles: ["sales", "manager", "admin"], mobileBar: false },
+  { key: "konstelacja", label: "Konstelacja", href: "/konstelacja", description: "Struktura i eskadry", roles: ["sales", "manager", "admin"], mobileBar: false },
   { key: "mennica", label: "Mennica", href: "/mennica", description: "Rozliczenia zarządu", roles: ["admin"], mobileBar: false },
 ];
 

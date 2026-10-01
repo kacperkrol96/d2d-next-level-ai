@@ -1,4 +1,24 @@
-import type { AppConfig } from "./types";
+import type { AgreementTypeConfig, AppConfig, StatusCategory } from "./types";
+
+/**
+ * Buduje domyślną tabelę status → kategoria ze ścieżki: wszystko przed
+ * pierwszym progiem = „w toku”, od progu = kategoria progu, a statusy
+ * z „NEGATYWNA” / „WIN-BACK” / „SPAD” = „negatywny”. Admin może potem
+ * zmienić każdą pozycję tabeli.
+ */
+function buildType(name: string, path: string[], thresholds: { from: string; category: StatusCategory }[]): AgreementTypeConfig {
+  const categories: Record<string, StatusCategory> = {};
+  let current: StatusCategory = "in_progress";
+  for (const status of path) {
+    const threshold = thresholds.find((t) => t.from === status);
+    if (threshold) current = threshold.category;
+    categories[status] = /NEGATYWNA|WIN-BACK|SPAD|DZIAŁ PRAWNY/.test(status) ? "negative" : current;
+  }
+  categories["WIN-BACK"] = "negative";
+  categories["SPAD"] = "negative";
+  categories["DZIAŁ PRAWNY"] = "negative";
+  return { name, path, categories };
+}
 
 /**
  * DANE STARTOWE konfiguracji (ze specyfikacji docs/SPEC.md).
@@ -39,14 +59,15 @@ export const seedConfig: AppConfig = {
       { key: "unique_meetings", label: "Liczba unikalnych spotkań", weight: 6, thresholds: [3, 3.25, 3.5, 3.75, 4], direction: "higher", unit: "szt" },
       { key: "leads_per_cycle", label: "Komplet leadów na cykl", weight: 4, thresholds: [9, 9.5, 10, 11, 11.5], direction: "higher", unit: "szt" },
       { key: "company_target", label: "Realizacja targetu spółki", weight: 4, thresholds: [90, 95, 100, 105, 110], direction: "higher", unit: "%" },
-      { key: "crm_reporting", label: "Raportowanie CRM", weight: 4, thresholds: [85, 90, 92.5, 95, 100], direction: "higher", unit: "%" },
+      { key: "reporting", label: "Raportowanie (z aplikacji)", weight: 4, thresholds: [85, 90, 92.5, 95, 100], direction: "higher", unit: "%", description: "% aktywnych bloków w czasie pracy" },
       { key: "crm_task_time", label: "Termin realizacji zadań w CRM", weight: 2, thresholds: [48, 36, 24, 12, 0], direction: "lower", unit: "h" },
     ],
     sales: [
-      { key: "five_star_reviews", label: "Opinie 5★", weight: 5, thresholds: [70, 75, 80, 90, 95], direction: "higher", unit: "%", description: "% klientów z ofertą, którzy mają zaliczoną opinię 5★" },
-      { key: "documents_24h", label: "Komplet dokumentów w 24h", weight: 5, thresholds: [70, 80, 90, 95, 100], direction: "higher", unit: "%", description: "% klientów z kompletem dokumentów ≤24h od podpisania umowy" },
-      { key: "team_auditors_kpi", label: "Średni wynik KPI audytorów", weight: 4, thresholds: [30, 46, 59, 70, 90], direction: "higher", unit: "pkt" },
-      { key: "offer_sign_time", label: "Czas podpisania oferty", weight: 4, thresholds: [6, 5, 4, 3.5, 3], direction: "lower", unit: "dni", description: "Średni czas od przekazania oferty do podpisania umowy" },
+      { key: "team_auditors_kpi", label: "Średni wynik KPI audytorów", weight: 5, thresholds: [30, 46, 59, 70, 90], direction: "higher", unit: "pkt" },
+      { key: "offer_sign_time", label: "Czas podpisania oferty", weight: 5, thresholds: [6, 5, 4, 3.5, 3], direction: "lower", unit: "dni", description: "Średni czas od „PRZEKAZANA DO PH” do podpisania umowy" },
+      { key: "documents_24h", label: "Komplet dokumentów (handlowiec + biuro)", weight: 4, thresholds: [70, 80, 90, 95, 100], direction: "higher", unit: "%", description: "% klientów, u których od podpisania umowy do pierwszego pozytywnego statusu po weryfikacji minęło ≤ okno (domyślnie 24h)" },
+      { key: "five_star_reviews", label: "Opinie 5★", weight: 2, thresholds: [70, 75, 80, 90, 95], direction: "higher", unit: "%", description: "% klientów z ofertą, którzy mają zaliczoną opinię 5★" },
+      { key: "reporting", label: "Raportowanie (z aplikacji)", weight: 2, thresholds: [85, 90, 92.5, 95, 100], direction: "higher", unit: "%", description: "% aktywnych bloków w czasie pracy" },
       { key: "company_result", label: "Wynik spółki", weight: 2, thresholds: [90, 95, 100, 105, 110], direction: "higher", unit: "%" },
     ],
   },
@@ -67,36 +88,104 @@ export const seedConfig: AppConfig = {
   ],
 
   rules: {
-    salesGreenFromStatus: "Wysłanie wniosku do WFOŚ",
-    auditorGreenFromStatus: "Po pomiarach",
-    auditorClosingBonusFromStatus: "Wysłanie wniosku do WFOŚ",
     samVatReduction: 0.75,
     surchargeCapShare: 0.1,
-    settlementPeriodDays: 14,
-    settlementAnchorDate: "2026-01-05",
     offerSignCapDays: 7,
     documentsDeadlineHours: 24,
     salesStructureCountsFromLevel: 5,
   },
 
-  pipelines: {
-    sales: [
-      "Nowy klient",
-      "Oferta przekazana do handlowca",
-      "Umowa podpisana",
-      "Komplet dokumentów",
-      "Wysłanie wniosku do WFOŚ",
-      "Wniosek zatwierdzony",
-      "Realizacja",
-      "Zakończona",
+  samVat: { enabled: true, incomeTier: "highest" },
+
+  timeZone: "Europe/Warsaw",
+
+  settlementPeriods: [
+    { fromDay: 1, toDay: 15, settleBy: { monthOffset: 0, day: 20 }, payoutOn: { monthOffset: 0, day: 25 } },
+    { fromDay: 16, toDay: null, settleBy: { monthOffset: 1, day: 5 }, payoutOn: { monthOffset: 1, day: 10 } },
+  ],
+
+  crm: {
+    scopeCodes: [
+      { codes: ["TERMO", "TERM"], scope: "thermo", label: "Termomodernizacja" },
+      { codes: ["KOT"], scope: "heatSource", label: "Kocioł" },
+      { codes: ["PC"], scope: "heatSource", label: "Pompa ciepła" },
+      { codes: ["ZGAZ"], scope: "heatSource", label: "Kocioł zgazowujący na drewno" },
+      { codes: ["REK"], scope: "rek", label: "Rekuperacja" },
+      { codes: ["A"], scope: "audit", label: "Audyt" },
     ],
-    audit: ["Umówiony audyt", "W trakcie pomiarów", "Po pomiarach", "Audyt przekazany", "Zakończony"],
-    cancelled: ["Rezygnacja"],
+    // Tylko podpowiedzi w kolejce „Do wyjaśnienia”; konta (employeeId) podepnie admin.
+    initials: [
+      { code: "ŁŁ", personName: "Łukasz Łubkowski", employeeId: null },
+      { code: "WL", personName: "Włodzimierz Lemański", employeeId: null },
+      { code: "WŁ", personName: "Włodzimierz Lemański", employeeId: null },
+      { code: "ŁB", personName: "Łukasz Burliga", employeeId: null, note: "eskadra zewnętrzna" },
+      { code: "DK", personName: "Dawid Kubowicz", employeeId: null },
+      { code: "KS", personName: "Kacper Szymanek", employeeId: null },
+      { code: "RS", personName: "Rafał Szwed", employeeId: null },
+      { code: "RSZ", personName: "Rafał Szczypkowski", employeeId: null },
+      { code: "PK", personName: "Piotr Kaszyński", employeeId: null },
+      { code: "DH", personName: "Damian Harasiuk", employeeId: null },
+      { code: "ES", personName: "Ewelina Sroka", employeeId: null },
+      { code: "MN", personName: "Marcin Nowakowski", employeeId: null },
+      { code: "MP", personName: "nieznane", employeeId: null },
+      // osoby testowe (dane demo)
+      { code: "MW", personName: "Marek Wiśniewski (test)", employeeId: "e-marek" },
+      { code: "AK", personName: "Anna Kowalska (test)", employeeId: "e-anna" },
+    ],
+    agreementTypes: [
+      buildType("PREFINANSOWANIE 2.0", [
+        "ZAWIERANIE UMOWY",
+        "UMOWA PODPISANA",
+        "WELCOME CALL",
+        "W TRAKCIE FINANSOWANIA",
+        "WYLICZENIE PROWIZJI",
+        "WERYFIKACJA UMOWY",
+        "WERYFIKACJA DOKUMENTOWA NEGATYWNA",
+        "REALIZACJA AUDYTU - GWD",
+        "PRZYGOTOWANIE DOKUMENTÓW WFOŚ",
+        "WERYFIKACJA DOKUMENTÓW WFOŚ",
+        "NEGATYWNA WERYFIKACJA DOKUMENTOWA - WFOŚ",
+        "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW",
+        "OCZEKIWANIE NA DECYZJĘ",
+      ], [{ from: "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW", category: "sales_earned" }]),
+      buildType("AUDYT CP 2.0", [
+        "ZAWIERANIE UMOWY",
+        "UMOWA PODPISANA",
+        "WERYFIKACJA FORMALNA",
+        "WELCOME CALL",
+        "WYLICZENIE PROWIZJI",
+        "OCZEKIWANIE NA GOPS/MOPS",
+        "WERYFIKACJA UMOWY",
+        "NEGATYWNA WERYFIKACJA DOKUMENTACYJNA",
+        "W TRAKCIE POMIARÓW",
+        "DOKUMENTACJA POMIAROWA",
+        "WERYFIKACJA POMIAROWA",
+        "NEGATYWNA WERYFIKACJA POMIAROWA",
+        "TWORZENIE OFERTY",
+        "PRZEKAZANA DO PH",
+        "SUKCES",
+      ], [
+        { from: "DOKUMENTACJA POMIAROWA", category: "auditor_grey" },
+        { from: "TWORZENIE OFERTY", category: "auditor_earned" },
+      ]),
+      // OZE 2.0 = umowy REK; ścieżka z obserwacji API (pisownia „ZAMAWANIE” jak w CRM).
+      buildType("OZE 2.0", [
+        "ZAWIERANIE UMOWY",
+        "UMOWA PODPISANA",
+        "W TRAKCIE FINANSOWANIA",
+        "WELCOME CALL",
+        "WERYFIKACJA UMOWY",
+        "ZAMAWANIE TOWARU",
+      ], []),
+    ],
+    negativeMarkers: ["NEGATYWNA", "WIN-BACK", "SPAD", "DZIAŁ PRAWNY"],
+    ignoredStatuses: ["WYLICZENIE PROWIZJI"],
     milestones: {
-      offerHandedOver: "Oferta przekazana do handlowca",
-      contractSigned: "Umowa podpisana",
-      documentsComplete: "Komplet dokumentów",
+      contractSigned: "UMOWA PODPISANA",
+      documentsComplete: "REALIZACJA AUDYTU - GWD",
+      offerHandedOver: "PRZEKAZANA DO PH",
     },
+    refreshMinutes: 15,
   },
 
   badges: [
@@ -108,8 +197,9 @@ export const seedConfig: AppConfig = {
     { key: "structure", label: "Lider", description: "Poziom 5 — własna struktura", metric: "level", min: 5 },
   ],
 
-  agreementCategories: {
-    thermo: ["Termomodernizacja"],
-    heatSource: ["Kocioł", "Pompa ciepła", "Źródło ciepła"],
-  },
+
+  kpiWeightRules: { total: 20, min: 2 },
+
+  // Data włączenia reguły ustawi admin (2 tygodnie po starcie pilota).
+  appLeadRule: { enforceFrom: null },
 };

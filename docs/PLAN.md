@@ -3,7 +3,7 @@
 ## Jak wydajemy etapy
 
 1. Każdy etap na osobnej gałęzi → Pull Request (GitHub Actions uruchamia lint, typy, testy i build).
-2. Kacper ogląda etap na linku podglądowym Vercel (preview) na iPadzie.
+2. Kacper ogląda etap na linku podglądowym Vercel (preview) na iPadzie — do czasu etapu Dostępy: na zrzutach ekranu w PR (`docs/zrzuty/`).
 3. Scalenie do `main` (produkcja) TYLKO po akceptacji Kacpra.
 4. Po etapie Kacper dostaje: link do PR, link do podglądu, listę rzeczy do przetestowania.
 
@@ -29,50 +29,82 @@ Plan: Supabase darmowy na czas budowy (dane testowe), Vercel Pro (projekt firmow
 - [x] Animacja licznika prowizji („liczarka banknotów” + odlot do Skarbca, dźwięk z wyciszeniem)
 - [x] Kokpit (Rozpocznij dzień + GPS), Skarbiec (lista prowizji), pozostałe panele jako zapowiedzi
 - [x] Poprawki po przeglądzie: Solo/Duet z rodzajów umów, awanse handlowców ze strukturą od poz. 5 (edytowalne), KPI 0–29 = 75% + alert + żółta kartka, flota jako pozycja „Flota” w rozliczeniu (Skarbiec, podgląd w Mennicy), CI na Pull Requestach
-- [ ] Odpowiedzi Kacpra na otwarte założenia (SPEC.md → „Założenia i decyzje”) — **warunek startu Etapu 1**
+- [x] Odpowiedzi Kacpra na założenia (SPEC.md → „Założenia i decyzje”)
 
-## Etap 1 — logowanie, role, Orbita, Skarbiec, KPI
+## Kolejność (decyzja Kacpra): najpierw wszystko na danych testowych
 
-- Supabase: projekt, tabele konfiguracji (poziomy, KPI, przedziały, flota, reguły, statusy, odznaki) + dane startowe z `src/lib/config/seed.ts`
-- Logowanie Google Workspace (tylko domena firmy), profile użytkowników, role, struktura (kto komu podlega)
-- Zabezpieczenie danych w bazie (Row Level Security: każdy widzi siebie i swoją strukturę)
-- Panel admina: edycja stawek/progów/wag, umowa ze spółką (rodzaj, data końca, wariant), auto firmowe, target spółki, kwoty za opiekę nad zespołem
-- Orbita i Skarbiec na danych z bazy; zapis „najwyższego poziomu” (poziom nie spada); historia osoby (żółte kartki) w bazie
-- Ceremonia awansu (pełny ekran), efekt „przelewu” szara → zielona
-- Przycisk „zgłoś błąd przypisania klienta”
-- Domena `app.nextlevelenergy.pl` na Vercel, przycisk „Zaloguj” na stronie www
+Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warstwa danych jest od początku gotowa pod Supabase: jedno miejsce podmiany źródła (`src/lib/data` → `getDataSource()`), ekrany i serwisy z niego korzystają. Do każdego podsumowania etapu dołączamy zrzuty ekranu (iPad poziomo + telefon) — `docs/zrzuty/<etap>/`.
 
-## Etap 2 — Akademia + Wieża
+## Etap 1 — Skarbiec z Trajektorią ✅
 
-- Akademia: ścieżki audytora i handlowca, moduły (skrypt, bank obiekcji, filmy, quizy), egzaminy sprawdzane automatycznie, odblokowywanie etapów
-- Wieża: zespół, postępy w Akademii, alerty KPI poniżej minimum
-- Opinie 5★: wgrywanie screena + zdjęcia, zgoda klienta, odczyt AI, akceptacja managera jednym kliknięciem, automatyczne usuwanie po 90 dniach
+- [x] Model danych jak w prawdziwym RRUP: typy umów, numery `INICJAŁY/NR/MM/RR/ZAKRES`, prawdziwe nazwy statusów
+- [x] Tabele przypisań w konfiguracji: końcówka → zakres, status → kategoria (ścieżki statusów), inicjały → osoba
+- [x] Przypisania: handlowiec = przypisany pracownik klienta (awaryjnie inicjały), audytor = „user” z umowy /A
+- [x] Kolejka „Do wyjaśnienia” (nic nie liczymy na zgadywanych danych) — w Mennicy i w Skarbcu
+- [x] Prowizje: kategorie statusów, Solo/Duet z końcówek, „sam VAT” (próg + brak REK, oferta ma pierwszeństwo), limit nadmarży bez REK, stawka wg poziomu z chwili zazielenienia, potrącenia po spadku w status negatywny
+- [x] Okresy 1–15 / 16–koniec z terminami rozliczenia i wypłaty; odliczanie w Mennicy
+- [x] KPI „Komplet dokumentów (handlowiec + biuro)” 24h i „Czas podpisania oferty” od „PRZEKAZANA DO PH”
+- [x] Trajektoria: droga każdej umowy klienta przez statusy (daty, obecny, kolejny krok, kroki do zielonej), wejście z klienta lub szarej kwoty, lista „Moje umowy”
+- [x] Powiadomienia „Biuro przesunęło umowę … do …” + karta „Ruchy biura”; odświeżanie przy otwarciu i co 15 min
+- [x] Warstwa danych `DataSource` (dane testowe; Supabase w etapie Dostępy)
+- [x] Poprawki po przeglądzie: „Dopłata do Duetu”; handlowiec ze źródeł aplikacja → CRM → historia (inicjały tylko podpowiedzią + „Potwierdź” w Mennicy); DZIAŁ PRAWNY = negatywny; próg i nadmarża jako ręczne pola przy kliencie; KPI „Raportowanie” dla obu ról, nowe wagi handlowca + walidacja wag; reguła „Nie ma w aplikacji…” z datą włączenia i ostrzeżeniami
 
-## Etap 3 — Mennica
+## Etap 2 — Akademia
 
-- Rozliczenie okresu (co 2 tygodnie), akceptacja/korekta zarządu z powodem i historią zmian
-- Akceptacja w Skarbcu przez handlowca/audytora
-- B2B: dane do faktury; Umowa zlecenia: rachunek PDF + wysyłka mailem do dyrektora biura i księgowości
-- Korekty po rezygnacji klienta (potrącenie w kolejnym okresie)
+- Ścieżki audytora i handlowca: skrypt, bank obiekcji, filmy, quizy (treści jako dane — przykładowe do podmiany)
+- Egzaminy sprawdzane automatycznie, etapy odblokowują się po zdaniu (animacja odblokowania)
+- Statystyki powodów z Radaru → Akademia (gdy będzie Radar)
 
-## Etap 4 — Konfigurator, Radar, Misje
+## Etap 3 — Wieża + Konstelacja (z eskadrami)
 
-- Konfigurator: podłączenie logiki z repo `kacperkrol96/kalkulator-nle` (bez kopiowania) — **poproszę o dodanie repo do sesji**
-- Radar: oferty od audytorów, zasada 3 dni (przypomnienie, czerwona + powód, przekazanie do Wieży), puls radaru, powiadomienia
-- Misje: kalendarz, zadania, spotkania, synchronizacja z Kalendarzem Google
+- Wieża: zespół, postępy w Akademii, alerty KPI poniżej minimum, zatwierdzanie opinii 5★ (screen + zdjęcie, zgoda, odczyt AI, usuwanie po 90 dniach)
+- Wieża — miejsca przygotowane pod etapy 5–6: alerty „puste przejścia”, wyjątki od reguły „Nie ma w aplikacji = nie ma klienta”, odsłuch nagrań
+- Konstelacja: struktura jako gwiazdozbiór, licznik „Twój zarobek ze struktury w tym miesiącu” (dyferencja + opieka nad zespołem), karta osoby
+- Eskadry: zewnętrzne grupy (np. prefiks ŁB), własny lider i pakiet zasad, przełącznik w panelu admina, historia po wyłączeniu
 
-## Etap CRM (równolegle, gdy będzie klucz API)
+## Etap 4 — Mennica (akceptacje na danych testowych)
 
-- Klient RRUP (`https://funduszremontowy.rrcrm.pl/api/v1`) w miejsce danych testowych — ten sam interfejs `CrmProvider`
-- Mapowanie prawdziwych nazw statusów, historia statusów i przypisań (obejście pustego pola pracownika i błędu 422)
-- Filtr RODO na wejściu (tylko potrzebne pola)
+- Rozliczenie okresu, akceptacja/korekta zarządu z powodem i historią zmian, akceptacja osoby w Skarbcu
+- B2B: dane do faktury; Umowa zlecenia: rachunek PDF + wysyłka mailem
+- Obsługa kolejki „Do wyjaśnienia”, panel admina: tabele przypisań (z kontami osób dla inicjałów), stawki, terminy, wagi KPI z walidacją (suma 20, min. 2), ręczne pola klienta (próg dochodowy, nadmarża), data włączenia reguły „Nie ma w aplikacji…”
 
-## Etap 5 — Terytorium
+## Etap 5 — Radar i Misje (+ leady, nagrania)
 
-- Rejony rysowane przez managera na mapie (MapLibre), domy z danych Geoportalu
-- Statusy domów, potwierdzenie obecności GPS (~30 m), procent wyczyszczenia rejonu, fala na mapie
-- Czas pracy = czas otwartej aplikacji, GPS tylko w godzinach pracy
+- Radar: start od „PRZEKAZANA DO PH”, zasada 3 dni (przypomnienie, czerwona + powód, Wieża po 7 dniach), puls radaru
+- Misje: kalendarz, zadania, spotkania umawiane tylko w aplikacji, synchronizacja z Kalendarzem Google
+- Lead w aplikacji: formularz + **lead głosem** (dyktowanie → AI wypełnia → zatwierdzenie jednym kliknięciem)
+- Kolejka „Do wysłania do CRM” dla leadów i spotkań (wysyłka po uzyskaniu prawa zapisu w RRUP)
+- **Nagrywanie rozmów v1.0**: „Nagraj” → „Wyślij” na audycie i spotkaniu, formuła informacyjna + checkbox zgody, powiązanie z klientem/spotkaniem, lista nagrań w Wieży (per osoba, filtr), auto-usuwanie po X dniach (domyślnie 30)
+- Tryb offline (kolejka zapisów + nagrań, synchronizacja po odzyskaniu zasięgu)
+- Leady z aplikacji zasilają regułę „Nie ma w aplikacji = nie ma klienta” (logika gotowa od Etapu 1; włączenie datą w ustawieniach, 2 tygodnie po starcie pilota) + wyjątki managera z powodem
+- Dopasowanie lead ↔ klient w CRM (numer klienta po wysłaniu; wcześniej telefon + adres; niepewne → „Do wyjaśnienia”)
+
+## Etap 6 — Terytorium i raportowanie w terenie
+
+- Rejony rysowane przez managera, domy z Geoportalu, statusy domów, procent wyczyszczenia rejonu, fala na mapie
+- **Odhaczenie domu w 2 sekundy** (GPS podświetla najbliższy dom), potwierdzenie obecności ~30 m
+- **Aktywne bloki czasu pracy** (min. 1 dom / 15 min — w ustawieniach), **„Zamknij dzień”** z obowiązkowym podsumowaniem
+- **Alert „puste przejścia”** w Wieży (GPS minął X domów, odhaczono Y — próg w ustawieniach)
+- **KPI „Raportowanie” z aplikacji** (% aktywnych bloków) — u audytorów i handlowców; dziś wartości testowe, w tym etapie liczone z Terytorium (+ testy)
+- Ograniczenie: GPS tylko przy otwartej aplikacji (PWA na iOS nie działa w tle) — weryfikacja w pilocie
+
+## Etap Dostępy — logowanie Google, baza, podgląd Vercel (⚠️ PRZED PILOTEM — przypomnieć Kacprowi)
+
+- Supabase (tabele z `src/lib/config/seed.ts`, RLS), `SupabaseDataSource` w miejsce danych testowych
+- Supabase Storage na nagrania (auto-usuwanie po X dniach) i pliki opinii 5★
+- Logowanie Google Workspace, profile i role
+- Vercel: podgląd na każdy PR + domena `app.nextlevelenergy.pl`, przycisk „Zaloguj” na www
+
+## Etap CRM — prawdziwe dane RRUP (gdy będzie klucz)
+
+- `RrupCrm` w miejsce `MockCrm` (ten sam interfejs), webhooki RRUP jeśli dostępne
+- Uzupełnienie ścieżek statusów i tabeli inicjałów, filtr RODO na wejściu
+- Gdy będzie prawo zapisu w RRUP: wysyłka kolejki leadów i spotkań do CRM
+
+## Później w 1.0
+
+- Konfigurator (logika z repo `kalkulator-nle` — poproszę o dodanie repo do sesji)
 
 ## Kolejne wersje
 
-1.1 Symulator (trener głosowy AI) · 2.0 rankingi, konkursy, awatary 3D · 3.0 Arena · 4.0 bank i księgowość
+1.1 Symulator (trener głosowy AI) + transkrypcja i ocena nagranych rozmów wg rubryki skryptu (audio usuwane po transkrypcji, dane osobowe ukryte) · 2.0 rankingi, konkursy, awatary 3D · 3.0 Arena · 4.0 bank i księgowość

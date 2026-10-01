@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seedConfig as config } from "@/lib/config/seed";
-import { averageOfferSignDays, bandForScore, computeKpi, documentsOnTimeRate, fiveStarReviewRate, kpiLevel } from "../kpi";
+import { averageOfferSignDays, bandForScore, computeKpi, documentsOnTimeRate, fiveStarReviewRate, kpiLevel, validateKpiWeights } from "../kpi";
 
 const def = (role: "auditor" | "sales", key: string) => config.kpi[role].find((k) => k.key === key)!;
 
@@ -56,7 +56,7 @@ describe("wynik KPI audytora (suma wag 20 → max 100 pkt)", () => {
   it("wszystko na poziomie V = 100 pkt i 110%", () => {
     const result = computeKpi(
       config.kpi.auditor,
-      { unique_meetings: 4, leads_per_cycle: 12, company_target: 115, crm_reporting: 100, crm_task_time: 0 },
+      { unique_meetings: 4, leads_per_cycle: 12, company_target: 115, reporting: 100, crm_task_time: 0 },
       config.kpiBands,
     );
     expect(result.score).toBe(100);
@@ -67,7 +67,7 @@ describe("wynik KPI audytora (suma wag 20 → max 100 pkt)", () => {
     const result = computeKpi(
       config.kpi.auditor,
       // spotkania III (3×6=18), leady II (2×4=8), target I (1×4=4), CRM IV (4×4=16), zadania III (3×2=6) = 52
-      { unique_meetings: 3.5, leads_per_cycle: 9.5, company_target: 92, crm_reporting: 96, crm_task_time: 24 },
+      { unique_meetings: 3.5, leads_per_cycle: 9.5, company_target: 92, reporting: 96, crm_task_time: 24 },
       config.kpiBands,
     );
     expect(result.score).toBe(52);
@@ -78,7 +78,7 @@ describe("wynik KPI audytora (suma wag 20 → max 100 pkt)", () => {
   it("poniżej minimum → alert", () => {
     const result = computeKpi(
       config.kpi.auditor,
-      { unique_meetings: 2, leads_per_cycle: 5, company_target: 80, crm_reporting: 80, crm_task_time: 72 },
+      { unique_meetings: 2, leads_per_cycle: 5, company_target: 80, reporting: 80, crm_task_time: 72 },
       config.kpiBands,
     );
     expect(result.score).toBe(0);
@@ -136,5 +136,49 @@ describe("surowe wartości KPI handlowca z historii statusów", () => {
     expect(fiveStarReviewRate(20, 17)).toBe(85);
     expect(fiveStarReviewRate(0, 0)).toBeNull();
     expect(fiveStarReviewRate(5, 9)).toBe(100);
+  });
+});
+
+describe("wagi KPI (walidacja w panelu admina)", () => {
+  const rules = config.kpiWeightRules;
+
+  it("dane startowe: suma wag 20, minimum 2, liczby całkowite — obie role", () => {
+    expect(validateKpiWeights(config.kpi.sales, rules)).toEqual([]);
+    expect(validateKpiWeights(config.kpi.auditor, rules)).toEqual([]);
+  });
+
+  it("wagi handlowca: KPI audytorów 5, czas podpisania 5, dokumenty 4, opinie 2, raportowanie 2, wynik spółki 2", () => {
+    expect(Object.fromEntries(config.kpi.sales.map((k) => [k.key, k.weight]))).toEqual({
+      team_auditors_kpi: 5,
+      offer_sign_time: 5,
+      documents_24h: 4,
+      five_star_reviews: 2,
+      reporting: 2,
+      company_result: 2,
+    });
+  });
+
+  it("zła suma, waga poniżej minimum, ułamek → błędy", () => {
+    const withWeight = (key: string, weight: number) => config.kpi.sales.map((k) => (k.key === key ? { ...k, weight } : k));
+    expect(validateKpiWeights(withWeight("reporting", 3), rules)).toEqual(["Suma wag musi wynosić 20 (jest 21)"]);
+    expect(validateKpiWeights(withWeight("reporting", 1), rules)).toContain("Waga „Raportowanie (z aplikacji)” nie może być mniejsza niż 2");
+    expect(validateKpiWeights(withWeight("reporting", 2.5), rules)).toContain("Waga „Raportowanie (z aplikacji)” musi być liczbą całkowitą");
+  });
+
+  it("wynik handlowca: suma(waga × poziom), max 100 pkt", () => {
+    const max = computeKpi(
+      config.kpi.sales,
+      { team_auditors_kpi: 95, offer_sign_time: 2, documents_24h: 100, five_star_reviews: 100, reporting: 100, company_result: 120 },
+      config.kpiBands,
+    );
+    expect(max.score).toBe(100);
+    const mixed = computeKpi(
+      config.kpi.sales,
+      // KPI audytorów II (2×5=10), podpis IV (4×5=20), dokumenty I (1×4=4), opinie V (5×2=10), raportowanie III (3×2=6), spółka III (3×2=6) = 56
+      { team_auditors_kpi: 50, offer_sign_time: 3.5, documents_24h: 72, five_star_reviews: 96, reporting: 92.5, company_result: 101 },
+      config.kpiBands,
+    );
+    expect(mixed.score).toBe(56);
+    expect(mixed.multiplier).toBe(0.8);
   });
 });

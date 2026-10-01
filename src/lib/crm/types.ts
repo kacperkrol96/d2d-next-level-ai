@@ -1,5 +1,3 @@
-import type { IncomeTier } from "@/lib/config/types";
-
 /**
  * Model danych z CRM (RRUP) — TYLKO pola potrzebne aplikacji.
  * RODO: nigdy nie pobieramy ani nie zapisujemy PESEL, numerów ksiąg
@@ -8,7 +6,7 @@ import type { IncomeTier } from "@/lib/config/types";
 
 export interface CrmStatusChange {
   status: string;
-  /** ISO 8601 — data wejścia w status (moduł czasu trwania statusu w CRM). */
+  /** ISO 8601 — data wejścia w status (historia statusów: createdAt / stateAfter). */
   at: string;
 }
 
@@ -29,12 +27,16 @@ export interface CrmEmployee {
 
 export interface CrmAgreement {
   id: string;
-  /** Rodzaj umowy jak w CRM (np. „Termomodernizacja”, „Kocioł”) — Solo/Duet liczymy z tego pola. */
-  kind: string;
+  clientId: string;
+  /** Numer umowy, np. „MW/12/09/26/TERMO” — zakres i inicjały odczytujemy z numeru. */
+  number: string;
+  /** Typ z CRM: PREFINANSOWANIE 2.0, OZE 2.0, AUDYT CP 2.0 (nie rozróżnia termo/kocioł). */
+  type: string;
+  /** Historia statusów (rosnąco po dacie); ostatni wpis = obecny status. */
+  statusHistory: CrmStatusChange[];
+  /** Pole „user” umowy — przy umowie audytowej (/A) to audytor; przy innych bywa przypadkowe. */
+  userId: string | null;
   valueNet: number;
-  surchargeNet: number;
-  samVat: boolean;
-  signedAt: string | null;
 }
 
 export interface CrmClient {
@@ -42,15 +44,10 @@ export interface CrmClient {
   /** Imię i inicjał nazwiska — wystarczy do rozpoznania klienta w aplikacji. */
   displayName: string;
   city: string;
-  incomeTier: IncomeTier;
-  salesStatusHistory: CrmStatusChange[];
-  auditStatusHistory: CrmStatusChange[];
-  /**
-   * Historia przypisań (pole „przypisany pracownik” w API wraca puste),
-   * przypisanie zmienia się z audytora na handlowca.
-   */
-  assignmentHistory: CrmAssignmentChange[];
-  agreements: CrmAgreement[];
+  /** Przypisany pracownik KLIENTA (dziś łącznik zwraca puste pole). */
+  assignedEmployeeId: string | null;
+  /** Historia/logi przypisań klienta; null = niedostępne (zdarzenia klienta zwracają błąd 422). */
+  assignmentHistory: CrmAssignmentChange[] | null;
   /** Link do klienta w CRM. */
   crmUrl: string;
 }
@@ -59,7 +56,7 @@ export interface CrmProvider {
   readonly source: "mock" | "rrup";
   listEmployees(): Promise<CrmEmployee[]>;
   listClients(): Promise<CrmClient[]>;
-  getClient(id: string): Promise<CrmClient | null>;
+  listAgreements(): Promise<CrmAgreement[]>;
   /** Przycisk „zgłoś błąd przypisania klienta”. */
   reportAssignmentError(clientId: string, reporterId: string, note: string): Promise<void>;
 }

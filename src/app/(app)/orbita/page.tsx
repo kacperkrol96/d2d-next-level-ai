@@ -31,8 +31,7 @@ export default async function OrbitaPage() {
     );
   }
 
-  const periodEnd = new Date(new Date(data.earnings.period.end).getTime() - 1);
-  const periodLabel = `${shortDate.format(new Date(data.earnings.period.start))} – ${shortDate.format(periodEnd)}`;
+  const periodLabel = `${shortDate.format(new Date(`${data.earnings.period.startDay}T12:00:00Z`))} – ${shortDate.format(new Date(`${data.earnings.period.endDay}T12:00:00Z`))}`;
 
   return (
     <div className="mx-auto max-w-6xl">
