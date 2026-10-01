@@ -1,4 +1,6 @@
-import type { AgreementScope, AppConfig, CrmRules, ScopeCode, StatusCategory } from "@/lib/config/types";
+import type { AgreementScope, AppConfig, CrmRules, InitialsCode, ScopeCode, StatusCategory } from "@/lib/config/types";
+import type { ClientTerms, LeadRuleException, SalesAttribution } from "@/lib/data/types";
+import { localDay } from "./settlement";
 import type { CrmAgreement, CrmClient, CrmEmployee, CrmStatusChange } from "@/lib/crm/types";
 
 /**
@@ -100,6 +102,16 @@ export function reachedPathStatusAt(agreement: CrmAgreement, status: string, rul
   return hit ? new Date(hit.at) : null;
 }
 
+// ------------------------------------------------------------------ inicjały (tylko podpowiedź)
+
+/** Podpowiedź osoby z inicjałów: najdłuższy pasujący prefiks (RSZ przed RS). */
+export function suggestFromInitials(initials: string | null, rules: CrmRules): InitialsCode | null {
+  if (!initials) return null;
+  const code = normalizeCode(initials);
+  const matches = rules.initials.filter((i) => code.startsWith(normalizeCode(i.code)));
+  return matches.sort((a, b) => normalizeCode(b.code).length - normalizeCode(a.code).length)[0] ?? null;
+}
+
 // ------------------------------------------------------------------ klient
 
 export type IssueKind =
@@ -107,8 +119,10 @@ export type IssueKind =
   | "unknown_suffix"
   | "unknown_status"
   | "no_sales_person"
-  | "unknown_initials"
-  | "no_auditor";
+  | "sales_conflict"
+  | "no_auditor"
+  | "missing_income_tier"
+  | "no_app_lead";
 
 export interface Issue {
   kind: IssueKind;
@@ -118,6 +132,8 @@ export interface Issue {
   /** Czego dotyczy blokada: prowizji handlowca, audytora czy obu. */
   blocks: ("sales" | "auditor")[];
   message: string;
+  /** Podpowiedź z inicjałów — do potwierdzenia przez admina jednym kliknięciem. */
+  suggestion?: InitialsCode;
 }
 
 export interface ResolvedAgreement {
@@ -128,31 +144,81 @@ export interface ResolvedAgreement {
   status: string | null;
 }
 
+export type SalesSource = "admin" | "app" | "client" | "history";
+
+/** Stan reguły „Nie ma w aplikacji = nie ma klienta”. */
+export type LeadRuleState = "ok" | "warning" | "blocked" | "not_applicable";
+
 export interface ResolvedClient {
   client: CrmClient;
+  terms: ClientTerms;
   salesId: string | null;
-  salesSource: "client" | "initials" | null;
+  salesSource: SalesSource | null;
   auditorId: string | null;
   agreements: ResolvedAgreement[];
   /** Umowy termo + źródło ciepła. */
   salesAgreements: ResolvedAgreement[];
   auditAgreement: ResolvedAgreement | null;
+  leadRule: LeadRuleState;
   issues: Issue[];
+}
+
+export interface AppClientInputs {
+  terms: readonly ClientTerms[];
+  attributions: readonly SalesAttribution[];
+  leadExceptions: readonly LeadRuleException[];
+  now: Date;
 }
 
 const blocksFor = (scope: AgreementScope | null): ("sales" | "auditor")[] =>
   scope === "audit" ? ["auditor"] : scope === null ? ["sales", "auditor"] : ["sales"];
 
+const sourceLabel: Record<SalesSource, string> = {
+  admin: "decyzja admina",
+  app: "aplikacja (Radar/lead)",
+  client: "przypisany pracownik w CRM",
+  history: "historia przypisań w CRM",
+};
+
+/**
+ * Reguła „Nie ma w aplikacji = nie ma klienta”: lead musi powstać w aplikacji przed
+ * podpisaniem umowy. Przed datą włączenia (albo dla umów podpisanych przed nią) — tylko ostrzeżenie.
+ */
+export function leadRuleState(
+  hasSales: boolean,
+  contractSignedAt: Date | null,
+  leadAt: Date | null,
+  hasException: boolean,
+  now: Date,
+  config: AppConfig,
+): LeadRuleState {
+  if (!hasSales) return "not_applicable";
+  if (hasException) return "ok";
+  if (leadAt && (!contractSignedAt || leadAt.getTime() <= contractSignedAt.getTime())) return "ok";
+  const from = config.appLeadRule.enforceFrom;
+  const today = localDay(now, config.timeZone);
+  const signedDay = contractSignedAt ? localDay(contractSignedAt, config.timeZone) : today;
+  return from && today >= from && signedDay >= from ? "blocked" : "warning";
+}
+
 /**
  * Ustalenie handlowca, audytora i zakresów klienta.
- * - handlowiec = przypisany pracownik klienta; awaryjnie inicjały z numeru umowy sprzedażowej,
- * - audytor = pole „user” z umowy audytowej (/A).
+ * Handlowiec — źródła w kolejności: (1) aplikacja: Radar/lead, (2) przypisany pracownik
+ * klienta w CRM, (3) historia przypisań w CRM. Różne osoby → „Do wyjaśnienia”.
+ * Decyzja admina rozstrzyga. Inicjały z numeru są TYLKO podpowiedzią w kolejce.
+ * Audytor = pole „user” z umowy audytowej (/A).
  */
-export function resolveClient(client: CrmClient, agreements: readonly CrmAgreement[], employees: readonly CrmEmployee[], config: AppConfig): ResolvedClient {
+export function resolveClient(
+  client: CrmClient,
+  agreements: readonly CrmAgreement[],
+  employees: readonly CrmEmployee[],
+  config: AppConfig,
+  app: AppClientInputs,
+): ResolvedClient {
   const rules = config.crm;
   const issues: Issue[] = [];
-  const issue = (kind: IssueKind, a: CrmAgreement | null, blocks: ("sales" | "auditor")[], message: string) =>
-    issues.push({ kind, clientId: client.id, agreementId: a?.id ?? null, agreementNumber: a?.number ?? null, blocks, message });
+  const issue = (kind: IssueKind, a: CrmAgreement | null, blocks: ("sales" | "auditor")[], message: string, suggestion?: InitialsCode) =>
+    issues.push({ kind, clientId: client.id, agreementId: a?.id ?? null, agreementNumber: a?.number ?? null, blocks, message, ...(suggestion ? { suggestion } : {}) });
 
   const resolved: ResolvedAgreement[] = agreements
     .filter((a) => a.clientId === client.id)
@@ -170,30 +236,48 @@ export function resolveClient(client: CrmClient, agreements: readonly CrmAgreeme
 
   const salesAgreements = resolved.filter((r) => r.scope === "thermo" || r.scope === "heatSource");
   const auditAgreement = resolved.find((r) => r.scope === "audit") ?? null;
+  const terms = app.terms.find((t) => t.clientId === client.id) ?? { clientId: client.id, incomeTier: null, surchargeNet: null, samVatFromOffer: null };
 
-  // Handlowiec
-  const employeeIds = new Set(employees.map((e) => e.id));
+  // ---- Handlowiec
+  const salesIds = new Set(employees.filter((e) => e.role === "sales").map((e) => e.id));
+  const mine = app.attributions.filter((a) => a.clientId === client.id && salesIds.has(a.employeeId));
+  const admin = [...mine].filter((a) => a.source === "admin").sort((a, b) => b.at.localeCompare(a.at))[0];
   let salesId: string | null = null;
-  let salesSource: ResolvedClient["salesSource"] = null;
-  if (client.assignedEmployeeId && employeeIds.has(client.assignedEmployeeId)) {
-    salesId = client.assignedEmployeeId;
-    salesSource = "client";
-  } else if (salesAgreements.length > 0) {
-    const first = salesAgreements[0].agreement;
-    const parsed = parseAgreementNumber(first.number, rules);
-    const match = parsed.initials ? rules.initials.find((i) => normalize(i.code) === parsed.initials) : undefined;
-    if (match) {
-      salesId = match.employeeId;
-      salesSource = "initials";
-    } else {
-      issue("unknown_initials", first, ["sales"], `Brak handlowca przy kliencie, a inicjały „${parsed.initials ?? "—"}” z umowy ${first.number} nie są w tabeli`);
+  let salesSource: SalesSource | null = null;
+  if (admin) {
+    salesId = admin.employeeId;
+    salesSource = "admin";
+  } else {
+    const candidates: { source: SalesSource; employeeId: string }[] = [];
+    for (const a of mine) candidates.push({ source: "app", employeeId: a.employeeId });
+    if (client.assignedEmployeeId && salesIds.has(client.assignedEmployeeId)) candidates.push({ source: "client", employeeId: client.assignedEmployeeId });
+    const lastHistory = [...(client.assignmentHistory ?? [])].sort((a, b) => b.at.localeCompare(a.at)).find((h) => salesIds.has(h.employeeId));
+    if (lastHistory) candidates.push({ source: "history", employeeId: lastHistory.employeeId });
+
+    const distinct = [...new Set(candidates.map((c) => c.employeeId))];
+    if (distinct.length === 1) {
+      salesId = distinct[0];
+      salesSource = candidates[0].source;
+    } else if (distinct.length > 1) {
+      const who = candidates.map((c) => `${employees.find((e) => e.id === c.employeeId)?.name ?? c.employeeId} (${sourceLabel[c.source]})`).join(" vs ");
+      issue("sales_conflict", salesAgreements[0]?.agreement ?? null, ["sales"], `Źródła wskazują różnych handlowców: ${who}`);
     }
   }
-  if (salesAgreements.length > 0 && !salesId && !issues.some((i) => i.kind === "unknown_initials")) {
-    issue("no_sales_person", salesAgreements[0].agreement, ["sales"], "Nie da się ustalić handlowca klienta");
+  if (!salesId && salesAgreements.length > 0 && !issues.some((i) => i.kind === "sales_conflict")) {
+    const first = salesAgreements[0].agreement;
+    const suggestion = suggestFromInitials(parseAgreementNumber(first.number, rules).initials, rules);
+    issue(
+      "no_sales_person",
+      first,
+      ["sales"],
+      suggestion
+        ? `Brak handlowca w aplikacji i CRM. Podpowiedź z inicjałów „${suggestion.code}”: ${suggestion.personName} — do potwierdzenia`
+        : `Brak handlowca w aplikacji i CRM; inicjały z umowy ${first.number} nie są w tabeli`,
+      suggestion ?? undefined,
+    );
   }
 
-  // Audytor
+  // ---- Audytor
   let auditorId: string | null = null;
   if (auditAgreement) {
     const user = auditAgreement.agreement.userId;
@@ -201,7 +285,33 @@ export function resolveClient(client: CrmClient, agreements: readonly CrmAgreeme
     else issue("no_auditor", auditAgreement.agreement, ["auditor"], `Umowa audytowa ${auditAgreement.agreement.number} nie wskazuje audytora`);
   }
 
-  return { client, salesId, salesSource, auditorId, agreements: resolved, salesAgreements, auditAgreement, issues };
+  // ---- Próg dochodowy (tylko gdy potrzebny: stawka audytora, reguła „sam VAT”)
+  if (!terms.incomeTier) {
+    const blocks: ("sales" | "auditor")[] = [];
+    if (auditAgreement) blocks.push("auditor");
+    if (salesAgreements.length > 0 && terms.samVatFromOffer === null && config.samVat.enabled) blocks.push("sales");
+    if (blocks.length) issue("missing_income_tier", null, blocks, "Brak progu dochodowego klienta (uzupełnia admin, docelowo z Konfiguratora)");
+  }
+
+  // ---- Reguła „Nie ma w aplikacji = nie ma klienta”
+  const signedAt = salesAgreements
+    .map((r) => enteredStatusAt(r.agreement, rules.milestones.contractSigned))
+    .filter((d): d is Date => d !== null)
+    .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+  const lead = app.attributions
+    .filter((a) => a.clientId === client.id && a.source === "lead")
+    .sort((a, b) => a.at.localeCompare(b.at))[0];
+  const leadRule = leadRuleState(
+    salesAgreements.length > 0,
+    signedAt,
+    lead ? new Date(lead.at) : null,
+    app.leadExceptions.some((e) => e.clientId === client.id),
+    app.now,
+    config,
+  );
+  if (leadRule === "blocked") issue("no_app_lead", salesAgreements[0]?.agreement ?? null, ["sales"], "Klient nie ma leadu w aplikacji sprzed umowy — prowizja i awans wstrzymane (wyjątek zatwierdza manager)");
+
+  return { client, terms, salesId, salesSource, auditorId, agreements: resolved, salesAgreements, auditAgreement, leadRule, issues };
 }
 
 export function isBlocked(client: ResolvedClient, role: "sales" | "auditor"): boolean {

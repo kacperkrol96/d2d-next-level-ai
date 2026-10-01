@@ -76,7 +76,8 @@ function monthlyFleetCosts(entries: CommissionEntry[], ctx: PortfolioContext): M
 function settlementFor(earnings: Earnings, kpi: KpiResult, fleetCosts: MonthlyFleetCost[]) {
   const fleet = fleetDeductionForPeriod(earnings.period, fleetCosts);
   const settlement = computeSettlement({
-    commissions: earnings.periodGreenTotal,
+    commissions: roundMoney(earnings.periodGreenTotal - earnings.periodDuoTopUps),
+    duoTopUps: earnings.periodDuoTopUps,
     kpiMultiplier: kpi.multiplier,
     deductions: earnings.periodDeductions,
     fleetCost: fleet.total,
@@ -94,7 +95,7 @@ async function yellowCards(personId: string, kpi: KpiResult, earnings: Earnings,
 async function auditorKpi(employeeId: string, ctx: PortfolioContext): Promise<KpiResult> {
   const source = getDataSource();
   const [inputs, target] = await Promise.all([source.kpiInputs(employeeId), source.companyTargetPct()]);
-  return computeKpi(ctx.config.kpi.auditor, { ...(inputs.auditorKpi ?? {}), company_target: target }, ctx.config.kpiBands);
+  return computeKpi(ctx.config.kpi.auditor, { ...(inputs.auditorKpi ?? {}), reporting: inputs.reportingPct, company_target: target }, ctx.config.kpiBands);
 }
 
 async function salesKpi(employeeId: string, ctx: PortfolioContext): Promise<KpiResult> {
@@ -111,6 +112,7 @@ async function salesKpi(employeeId: string, ctx: PortfolioContext): Promise<KpiR
       documents_24h: documentsOnTimeRate(raw.documents, now, config.rules.documentsDeadlineHours),
       team_auditors_kpi: scores.length ? roundMoney(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
       offer_sign_time: averageOfferSignDays(raw.offers, now, config.rules.offerSignCapDays),
+      reporting: inputs.reportingPct,
       company_result: target,
     },
     config.kpiBands,

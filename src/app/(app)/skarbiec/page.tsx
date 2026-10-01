@@ -33,7 +33,7 @@ function EntryList({ entries, tone }: { entries: CommissionEntry[]; tone: Tone }
   return (
     <ul className="flex flex-col gap-2">
       {entries.map((e) => (
-        <li key={`${e.clientId}-${e.state}`}>
+        <li key={`${e.clientId}-${e.kind}-${e.state}`}>
           <Link
             href={`/skarbiec/klient/${e.clientId}`}
             className="flex items-center justify-between gap-4 rounded-2xl bg-card-2 px-4 py-3 transition hover:bg-white/[0.06]"
@@ -41,11 +41,13 @@ function EntryList({ entries, tone }: { entries: CommissionEntry[]; tone: Tone }
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-sm">
                 {e.clientName} <span className="text-xs text-muted">· {e.city}</span>
+                {e.kind === "duoTopUp" && <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] text-gold">Dopłata do Duetu</span>}
               </div>
               <div className="truncate text-xs text-muted">
                 {tone === "grey" && steps(e.stepsToGreen) ? <span className="text-white/80">{steps(e.stepsToGreen)} · </span> : null}
                 {tone === "unresolved" ? e.detail : `${e.status} · ${e.detail}`}
               </div>
+              {e.warning && <div className="text-[11px] text-gold/80">{e.warning}</div>}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {tone !== "unresolved" && <span className={`num text-lg font-semibold ${toneClass[tone]}`}>{e.amount < 0 ? "−" : ""}{formatPLN(Math.abs(e.amount))}</span>}

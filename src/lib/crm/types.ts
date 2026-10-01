@@ -1,5 +1,3 @@
-import type { IncomeTier } from "@/lib/config/types";
-
 /**
  * Model danych z CRM (RRUP) — TYLKO pola potrzebne aplikacji.
  * RODO: nigdy nie pobieramy ani nie zapisujemy PESEL, numerów ksiąg
@@ -9,6 +7,11 @@ import type { IncomeTier } from "@/lib/config/types";
 export interface CrmStatusChange {
   status: string;
   /** ISO 8601 — data wejścia w status (historia statusów: createdAt / stateAfter). */
+  at: string;
+}
+
+export interface CrmAssignmentChange {
+  employeeId: string;
   at: string;
 }
 
@@ -34,8 +37,6 @@ export interface CrmAgreement {
   /** Pole „user” umowy — przy umowie audytowej (/A) to audytor; przy innych bywa przypadkowe. */
   userId: string | null;
   valueNet: number;
-  /** Nadmarża netto (docelowo z Konfiguratora). */
-  surchargeNet: number;
 }
 
 export interface CrmClient {
@@ -43,14 +44,10 @@ export interface CrmClient {
   /** Imię i inicjał nazwiska — wystarczy do rozpoznania klienta w aplikacji. */
   displayName: string;
   city: string;
-  incomeTier: IncomeTier;
-  /** Przypisany pracownik KLIENTA = handlowiec (w API bywa puste → inicjały z numeru). */
+  /** Przypisany pracownik KLIENTA (dziś łącznik zwraca puste pole). */
   assignedEmployeeId: string | null;
-  /**
-   * Oznaczenie „sam VAT” z oferty (Konfigurator). Gdy ustawione — ma
-   * pierwszeństwo przed regułą (próg dochodowy + brak REK). null = brak oferty.
-   */
-  samVatFromOffer: boolean | null;
+  /** Historia/logi przypisań klienta; null = niedostępne (zdarzenia klienta zwracają błąd 422). */
+  assignmentHistory: CrmAssignmentChange[] | null;
   /** Link do klienta w CRM. */
   crmUrl: string;
 }

@@ -13,7 +13,6 @@ const agreement = (type: string, statuses: string[], number = "MW/01/09/26/TERMO
   statusHistory: statuses.map((status, i) => ({ status, at: at(1 + i) })),
   userId: null,
   valueNet: 0,
-  surchargeNet: 0,
 });
 
 describe("Trajektoria umowy sprzedażowej", () => {
@@ -69,7 +68,7 @@ describe("statusy negatywne i nieznane", () => {
   });
 
   it("nieznany status nie psuje widoku", () => {
-    const t = buildTrajectory(agreement("PREFINANSOWANIE 2.0", ["UMOWA PODPISANA", "DZIAŁ PRAWNY"]), "thermo", rules);
+    const t = buildTrajectory(agreement("PREFINANSOWANIE 2.0", ["UMOWA PODPISANA", "NOWY STATUS W CRM"]), "thermo", rules);
     expect(t.unknown).toBe(true);
     expect(t.stepsToGreen).toBeNull();
   });

@@ -12,10 +12,11 @@ function buildType(name: string, path: string[], thresholds: { from: string; cat
   for (const status of path) {
     const threshold = thresholds.find((t) => t.from === status);
     if (threshold) current = threshold.category;
-    categories[status] = /NEGATYWNA|WIN-BACK|SPAD/.test(status) ? "negative" : current;
+    categories[status] = /NEGATYWNA|WIN-BACK|SPAD|DZIAŁ PRAWNY/.test(status) ? "negative" : current;
   }
   categories["WIN-BACK"] = "negative";
   categories["SPAD"] = "negative";
+  categories["DZIAŁ PRAWNY"] = "negative";
   return { name, path, categories };
 }
 
@@ -58,14 +59,15 @@ export const seedConfig: AppConfig = {
       { key: "unique_meetings", label: "Liczba unikalnych spotkań", weight: 6, thresholds: [3, 3.25, 3.5, 3.75, 4], direction: "higher", unit: "szt" },
       { key: "leads_per_cycle", label: "Komplet leadów na cykl", weight: 4, thresholds: [9, 9.5, 10, 11, 11.5], direction: "higher", unit: "szt" },
       { key: "company_target", label: "Realizacja targetu spółki", weight: 4, thresholds: [90, 95, 100, 105, 110], direction: "higher", unit: "%" },
-      { key: "crm_reporting", label: "Raportowanie CRM", weight: 4, thresholds: [85, 90, 92.5, 95, 100], direction: "higher", unit: "%" },
+      { key: "reporting", label: "Raportowanie (z aplikacji)", weight: 4, thresholds: [85, 90, 92.5, 95, 100], direction: "higher", unit: "%", description: "% aktywnych bloków w czasie pracy" },
       { key: "crm_task_time", label: "Termin realizacji zadań w CRM", weight: 2, thresholds: [48, 36, 24, 12, 0], direction: "lower", unit: "h" },
     ],
     sales: [
-      { key: "five_star_reviews", label: "Opinie 5★", weight: 5, thresholds: [70, 75, 80, 90, 95], direction: "higher", unit: "%", description: "% klientów z ofertą, którzy mają zaliczoną opinię 5★" },
-      { key: "documents_24h", label: "Komplet dokumentów (handlowiec + biuro)", weight: 5, thresholds: [70, 80, 90, 95, 100], direction: "higher", unit: "%", description: "% klientów, u których od podpisania umowy do pierwszego pozytywnego statusu po weryfikacji minęło ≤ okno (domyślnie 24h)" },
-      { key: "team_auditors_kpi", label: "Średni wynik KPI audytorów", weight: 4, thresholds: [30, 46, 59, 70, 90], direction: "higher", unit: "pkt" },
-      { key: "offer_sign_time", label: "Czas podpisania oferty", weight: 4, thresholds: [6, 5, 4, 3.5, 3], direction: "lower", unit: "dni", description: "Średni czas od przekazania oferty do podpisania umowy" },
+      { key: "team_auditors_kpi", label: "Średni wynik KPI audytorów", weight: 5, thresholds: [30, 46, 59, 70, 90], direction: "higher", unit: "pkt" },
+      { key: "offer_sign_time", label: "Czas podpisania oferty", weight: 5, thresholds: [6, 5, 4, 3.5, 3], direction: "lower", unit: "dni", description: "Średni czas od „PRZEKAZANA DO PH” do podpisania umowy" },
+      { key: "documents_24h", label: "Komplet dokumentów (handlowiec + biuro)", weight: 4, thresholds: [70, 80, 90, 95, 100], direction: "higher", unit: "%", description: "% klientów, u których od podpisania umowy do pierwszego pozytywnego statusu po weryfikacji minęło ≤ okno (domyślnie 24h)" },
+      { key: "five_star_reviews", label: "Opinie 5★", weight: 2, thresholds: [70, 75, 80, 90, 95], direction: "higher", unit: "%", description: "% klientów z ofertą, którzy mają zaliczoną opinię 5★" },
+      { key: "reporting", label: "Raportowanie (z aplikacji)", weight: 2, thresholds: [85, 90, 92.5, 95, 100], direction: "higher", unit: "%", description: "% aktywnych bloków w czasie pracy" },
       { key: "company_result", label: "Wynik spółki", weight: 2, thresholds: [90, 95, 100, 105, 110], direction: "higher", unit: "%" },
     ],
   },
@@ -111,12 +113,24 @@ export const seedConfig: AppConfig = {
       { codes: ["REK"], scope: "rek", label: "Rekuperacja" },
       { codes: ["A"], scope: "audit", label: "Audyt" },
     ],
-    // Dane testowe — prawdziwą tabelę inicjałów uzupełni admin.
+    // Tylko podpowiedzi w kolejce „Do wyjaśnienia”; konta (employeeId) podepnie admin.
     initials: [
-      { code: "AK", employeeId: "e-anna" },
-      { code: "MW", employeeId: "e-marek" },
-      { code: "ON", employeeId: "e-ola" },
-      { code: "TZ", employeeId: "e-tomek" },
+      { code: "ŁŁ", personName: "Łukasz Łubkowski", employeeId: null },
+      { code: "WL", personName: "Włodzimierz Lemański", employeeId: null },
+      { code: "WŁ", personName: "Włodzimierz Lemański", employeeId: null },
+      { code: "ŁB", personName: "Łukasz Burliga", employeeId: null, note: "eskadra zewnętrzna" },
+      { code: "DK", personName: "Dawid Kubowicz", employeeId: null },
+      { code: "KS", personName: "Kacper Szymanek", employeeId: null },
+      { code: "RS", personName: "Rafał Szwed", employeeId: null },
+      { code: "RSZ", personName: "Rafał Szczypkowski", employeeId: null },
+      { code: "PK", personName: "Piotr Kaszyński", employeeId: null },
+      { code: "DH", personName: "Damian Harasiuk", employeeId: null },
+      { code: "ES", personName: "Ewelina Sroka", employeeId: null },
+      { code: "MN", personName: "Marcin Nowakowski", employeeId: null },
+      { code: "MP", personName: "nieznane", employeeId: null },
+      // osoby testowe (dane demo)
+      { code: "MW", personName: "Marek Wiśniewski (test)", employeeId: "e-marek" },
+      { code: "AK", personName: "Anna Kowalska (test)", employeeId: "e-anna" },
     ],
     agreementTypes: [
       buildType("PREFINANSOWANIE 2.0", [
@@ -164,7 +178,7 @@ export const seedConfig: AppConfig = {
         "ZAMAWANIE TOWARU",
       ], []),
     ],
-    negativeMarkers: ["NEGATYWNA", "WIN-BACK", "SPAD"],
+    negativeMarkers: ["NEGATYWNA", "WIN-BACK", "SPAD", "DZIAŁ PRAWNY"],
     ignoredStatuses: ["WYLICZENIE PROWIZJI"],
     milestones: {
       contractSigned: "UMOWA PODPISANA",
@@ -183,4 +197,9 @@ export const seedConfig: AppConfig = {
     { key: "structure", label: "Lider", description: "Poziom 5 — własna struktura", metric: "level", min: 5 },
   ],
 
+
+  kpiWeightRules: { total: 20, min: 2 },
+
+  // Data włączenia reguły ustawi admin (2 tygodnie po starcie pilota).
+  appLeadRule: { enforceFrom: null },
 };

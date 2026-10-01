@@ -63,7 +63,7 @@ Problem: ludzie nie odhaczają domów i nie wpisują leadów. Rozwiązanie w trz
 ### a) Szybciej wpisać niż pominąć
 
 - **Odhaczenie domu w 2 sekundy**: aplikacja z GPS podświetla najbliższy dom, handlowiec stuka tylko status.
-- **Lead głosem**: dyktowanie („Kowalski, czwartek 17:00, pompa ciepła”) → AI wypełnia formularz → zatwierdzenie jednym kliknięciem.
+- **Lead głosem**: dyktowanie („Kowalski, czwartek 17:00, pompa ciepła”) → AI wypełnia formularz → zatwierdzenie jednym kliknięciem. Mowa i AI: ten sam dostawca co Symulator (OpenAI).
 - **Spotkania umawiane tylko w aplikacji** → od razu w Misjach i w Kalendarzu Google.
 - **Tryb offline** z synchronizacją po odzyskaniu zasięgu (domy, leady, spotkania, nagrania).
 
@@ -76,7 +76,8 @@ Problem: ludzie nie odhaczają domów i nie wpisują leadów. Rozwiązanie w trz
 ### c) Konsekwencje
 
 - **KPI „Raportowanie”** liczone automatycznie z aplikacji — zastępuje ręczne „Raportowanie CRM” u audytorów (waga i progi bez zmian do decyzji).
-- **Reguła „Nie ma w aplikacji = nie ma klienta”**: prowizja i zaliczenie do awansu tylko dla klientów, których lead powstał w aplikacji PRZED umową. Przełącznik w ustawieniach, domyślnie WYŁĄCZONY. Manager może zatwierdzić wyjątek z podaniem powodu (zapis w historii). Klient bez leadu przy włączonej regule → „Do wyjaśnienia” (blokuje prowizję i awans), dopóki manager nie zatwierdzi wyjątku.
+- **Reguła „Nie ma w aplikacji = nie ma klienta”**: prowizja i zaliczenie do awansu tylko dla klientów, których lead powstał w aplikacji PRZED umową. Gotowa w kodzie; włączana 2 tygodnie po starcie pilota — data w ustawieniach (`appLeadRule.enforceFrom`). Przed tą datą tylko ostrzeżenie „Ten klient nie ma leadu w aplikacji”. Reguła obejmuje umowy podpisane od daty włączenia (nie działa wstecz). Manager może zatwierdzić wyjątek z podaniem powodu (zapis w historii). Klient bez leadu przy włączonej regule → „Do wyjaśnienia” (blokuje prowizję i awans), dopóki manager nie zatwierdzi wyjątku.
+- **Lead ↔ klient w CRM**: po wysłaniu leadu do CRM zapisujemy numer klienta z CRM; do tego czasu dopasowanie po telefonie i adresie; niepewne → „Do wyjaśnienia”.
 - **Zapis do CRM**: leady i spotkania trafiają do kolejki „Do wysłania do CRM”. Wysyłka wymaga prawa zapisu w RRUP — podłączymy później; do tego czasu kolejka czeka, a dane są w aplikacji.
 
 ### Ograniczenia techniczne (do sprawdzenia w pilocie)
@@ -107,9 +108,12 @@ Problem: ludzie nie odhaczają domów i nie wpisują leadów. Rozwiązanie w trz
   - **Solo** = tylko termo albo tylko źródło ciepła,
   - **Duet** = termo + co najmniej jedno źródło ciepła („prace po korek”); REK nie wpływa na Solo/Duet,
   - stawka należy się w całości handlowcowi przypisanemu do klienta — nic nie dzielimy,
-  - zakres rozpoznajemy z końcówki numeru umowy (tabela przypisań, sekcja CRM); umowa w statusie negatywnym się nie liczy.
+  - zakres rozpoznajemy z końcówki numeru umowy (tabela przypisań, sekcja CRM); umowa w statusie negatywnym się nie liczy,
+  - **wypłata w dwóch krokach**: gdy zielona jest tylko jedna z umów (termo albo źródło) — od razu stawka Solo; gdy zazieleni się umowa drugiej kategorii — **„Dopłata do Duetu”** (różnica Duet − Solo, także w nadmarży) jako osobna pozycja w Skarbcu i rozliczeniu (objęta mnożnikiem KPI). Utrata jednej z umów po wypłacie dopłaty → potrącenie dopłaty; utrata wszystkich → potrącenie całości.
 - **Handlowiec**: prowizja zielona od statusu „W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW” lub dalej. Klient „sam VAT” = prowizja −75%. Nadmarża od kwoty netto, limit 10% wartości netto umów termo + źródło ciepła (bez REK), udział wg poziomu. Brak minimum do utrzymania poziomu. Od poziomu 5 wzwyż do progów awansu wliczają się klienci całego zespołu (jego + wszystkich podległych handlowców); próg „od którego poziomu” jest edytowalny w panelu admina.
 - **„Sam VAT”** = klient na najwyższym progu dochodowym ORAZ bez umowy REK (reguła włączona, wyłączana w panelu). Po podpięciu Konfiguratora oznaczenie „sam VAT” z oferty ma pierwszeństwo (pole `samVatFromOffer` w modelu danych).
+- **Próg dochodowy i nadmarża**: docelowo z Konfiguratora; do tego czasu ręczne pola przy kliencie (admin). Brak progu → „Do wyjaśnienia” tylko, gdy jest potrzebny (stawka audytora; reguła „sam VAT”, gdy oferta tego nie rozstrzyga). Brak nadmarży = 0 z adnotacją „nadmarża nieuzupełniona”.
+- **Kto jest handlowcem przy kliencie** — źródła w kolejności: (1) aplikacja: handlowiec przyjął ofertę w Radarze albo założył lead (główne źródło prawdy); (2) przypisany pracownik klienta w CRM (gdy łącznik zacznie zwracać to pole); (3) historia/logi przypisań klienta w CRM (gdy łącznik naprawi zdarzenia klienta — błąd 422); (4) inicjały z numeru — WYŁĄCZNIE podpowiedź w kolejce „Do wyjaśnienia”, do potwierdzenia przez admina jednym kliknięciem. Gdy źródła 1–3 wskazują różne osoby → „Do wyjaśnienia”, nigdy zgadywanie. Decyzja admina rozstrzyga.
 - **Audytor**: prowizja szara od „DOKUMENTACJA POMIAROWA”, zielona od „TWORZENIE OFERTY” (umowa audytowa /A). Stawka zależy od progu dochodowego klienta (podstawowy/podwyższony/najwyższy). Bonus za zamknięcie — gdy prowizja handlowca u tego klienta jest zielona. Poziom zdobyty raz zostaje na zawsze. Od poziomu 5 liczą się klienci struktury + aktywne osoby. Manager dostaje dyferencję.
 - **Stawka wg poziomu z chwili, gdy prowizja zrobiła się zielona** (poziom, który osoba miała tuż przed tym klientem).
 - **Klienci do awansu**: rezygnacja / status negatywny po zaliczeniu odejmuje klienta z licznika, ale zdobyty poziom zostaje.
@@ -183,18 +187,21 @@ Mechanika (obie role): każde KPI oceniane na poziomie I–V (1–5 pkt) × waga
 | Liczba unikalnych spotkań | 6 | 3 | 3,25 | 3,5 | 3,75 | 4 |
 | Komplet leadów na cykl | 4 | 9 | 9,5 | 10 | 11 | 11,5 |
 | Realizacja targetu spółki | 4 | 90% | 95% | 100% | 105% | 110% |
-| Raportowanie CRM → **Raportowanie (z aplikacji)** | 4 | 85% | 90% | 92,5% | 95% | 100% |
+| **Raportowanie (z aplikacji)** — % aktywnych bloków w czasie pracy | 4 | 85% | 90% | 92,5% | 95% | 100% |
 | Termin realizacji zadań w CRM | 2 | 48h | 36h | 24h | 12h | 0h |
 
-### Handlowiec (propozycja domyślna, do zmiany w panelu)
+### Handlowiec
 
 | KPI | Waga | I | II | III | IV | V |
 |---|---|---|---|---|---|---|
-| Opinie 5★ | 5 | 70% | 75% | 80% | 90% | 95% |
-| Komplet dokumentów (handlowiec + biuro) | 5 | 70% | 80% | 90% | 95% | 100% |
-| Średni wynik KPI podległych audytorów | 4 | 30 | 46 | 59 | 70 | 90 pkt |
-| Czas podpisania oferty | 4 | ≤6 | ≤5 | ≤4 | ≤3,5 | ≤3 dni |
+| Średni wynik KPI podległych audytorów | 5 | 30 | 46 | 59 | 70 | 90 pkt |
+| Czas podpisania oferty | 5 | ≤6 | ≤5 | ≤4 | ≤3,5 | ≤3 dni |
+| Komplet dokumentów (handlowiec + biuro) | 4 | 70% | 80% | 90% | 95% | 100% |
+| Opinie 5★ | 2 | 70% | 75% | 80% | 90% | 95% |
+| Raportowanie (z aplikacji) | 2 | 85% | 90% | 92,5% | 95% | 100% |
 | Wynik spółki | 2 | 90% | 95% | 100% | 105% | 110% |
+
+Wynik = suma(waga × poziom I–V), max 100 pkt; progi mnożnika bez zmian. **Walidacja wag w panelu admina** (obie role): liczby całkowite, suma = 20, żadna waga poniżej 2.
 
 - **Opinie 5★** — % klientów z ofertą, którzy mają zaliczoną opinię 5★. Zaliczenie: handlowiec wgrywa screenshot opinii 5★ klienta z Google oraz zdjęcie z klientem. AI wstępnie odczytuje ze screena liczbę gwiazdek, nazwisko i datę; manager zatwierdza lub odrzuca w Wieży jednym kliknięciem. Wymagany checkbox „klient zgodził się na zdjęcie”. Screenshot i zdjęcie usuwane 90 dni po zaliczeniu.
 - **Komplet dokumentów (handlowiec + biuro)** — odpowiedzialność wspólna. Zaliczone, gdy od podpisania umowy („UMOWA PODPISANA”) do wejścia w pierwszy pozytywny status po weryfikacji („REALIZACJA AUDYTU - GWD” lub dalszy) minęło ≤ 24h. „WERYFIKACJA DOKUMENTOWA NEGATYWNA” po drodze liczy się do czasu. Okno 24h edytowalne w panelu; pilot startuje z 24h.
@@ -235,6 +242,7 @@ Powody zasilają statystyki dla Akademii.
 
 ### Fakty (sprawdzone na umowach z CRM)
 
+- Dostęp w Etapie 1: przez łącznik RRUP (MCP) w sesji developerskiej — tylko odczyt, tylko struktura danych, bez danych osobowych klientów. **Adres łącznika RRUP nigdy nie trafia do repozytorium, kodu, dokumentacji ani zrzutów.**
 - Typy umów: PREFINANSOWANIE 2.0 (termo i źródła ciepła), OZE 2.0 (REK), AUDYT CP 2.0 (/A). Pole typu NIE rozróżnia termo/kocioł.
 - Numer: `INICJAŁY/NR/MM/RR[RR]/ZAKRES` (np. `MW/12/09/26/TERMO`); zakres tylko w końcówce, pisownia niejednolita (TERMO/Termo/TERM, Kot, Rek), część numerów bez końcówki.
 - Pole „user” umowy często wskazuje audytora, nie handlowca; bywa puste.
@@ -244,13 +252,13 @@ Powody zasilają statystyki dla Akademii.
 
 1. Końcówka numeru → zakres (bez względu na wielkość liter i skróty): TERMO/TERM → termomodernizacja; KOT → kocioł; PC → pompa ciepła; ZGAZ → kocioł zgazowujący na drewno; REK → rekuperacja (nie wpływa na Solo/Duet); A → audyt.
 2. Status → kategoria: „w toku”, „prowizja handlowca zarobiona”, „prowizja audytora szara”, „prowizja audytora zarobiona”, „negatywny”.
-3. Inicjały z numeru → osoba (awaryjne źródło handlowca).
+3. Inicjały z numeru → osoba — **tylko podpowiedź** w kolejce „Do wyjaśnienia” (inicjały są zawodne: RS = Rafał Szwed, RSZ = Rafał Szczypkowski). Dopasowanie najdłuższego prefiksu (RSZ przed RS). Dane startowe: ŁŁ – Łukasz Łubkowski; WL, WŁ – Włodzimierz Lemański; ŁB – Łukasz Burliga (eskadra zewnętrzna); DK – Dawid Kubowicz; KS – Kacper Szymanek; RS – Rafał Szwed; RSZ – Rafał Szczypkowski; PK – Piotr Kaszyński; DH – Damian Harasiuk; ES – Ewelina Sroka; MN – Marcin Nowakowski; MP – nieznane.
 
 Wszystko nierozpoznane (końcówka, status, inicjały, brak handlowca/audytora) → kolejka „Do wyjaśnienia” w Mennicy.
 
 ### Przypisania
 
-- Handlowiec = przypisany pracownik KLIENTA. Awaryjnie: inicjały z numeru umowy sprzedażowej.
+- Handlowiec — kolejność źródeł: aplikacja (Radar / lead) → przypisany pracownik klienta w CRM → historia przypisań w CRM; inicjały tylko jako podpowiedź (szczegóły: „Zasady prowizji”).
 - Audytor = „user” z umowy audytowej (/A) tego klienta.
 
 ### Ścieżki statusów
@@ -333,16 +341,20 @@ Wszystkie założenia z Etapu 0 są rozstrzygnięte:
 12. ✅ Okresy — 1–15 i 16–koniec miesiąca (tabela wyżej).
 13. ✅ Statusy i zakresy — z prawdziwego CRM (sekcja CRM), tabele edytowalne.
 
-### Do decyzji — raportowanie w terenie i nagrania
+### Rozstrzygnięte po Etapie 1
 
-- Wzór KPI „Raportowanie (z aplikacji)” dla audytora. Rekomendacja: % aktywnych bloków w czasie pracy (blok aktywny = min. 1 odhaczony dom na 15 min), progi I–V bez zmian (85–100%).
-- Czy KPI „Raportowanie” dostają też handlowcy (dziś nie mają go w tabeli).
-- Jak łączyć lead z aplikacji z klientem w CRM przy regule „Nie ma w aplikacji = nie ma klienta”. Rekomendacja: po wysłaniu leadu do CRM zapisujemy jego ID klienta; do tego czasu dopasowanie po numerze telefonu + adresie, a wątpliwe przypadki → „Do wyjaśnienia”.
-- Dostawca rozpoznawania mowy / AI dla leadu głosem i transkrypcji.
+- ✅ Stawka wg poziomu sprzed klienta; potrącenie w okresie spadku w status negatywny.
+- ✅ Duet: Solo od razu + „Dopłata do Duetu” jako osobna pozycja.
+- ✅ Handlowiec: źródła w kolejności aplikacja → CRM → historia; inicjały tylko podpowiedzią.
+- ✅ „DZIAŁ PRAWNY” = status negatywny.
+- ✅ Próg dochodowy i nadmarża: ręczne pola przy kliencie do czasu Konfiguratora.
+- ✅ KPI „Raportowanie” = % aktywnych bloków (audytor i handlowiec), nowe wagi handlowca, walidacja wag.
+- ✅ Lead ↔ klient w CRM: numer klienta po wysłaniu, wcześniej telefon + adres, niepewne → „Do wyjaśnienia”.
+- ✅ Mowa i AI: OpenAI (jak Symulator).
+- ✅ Reguła „Nie ma w aplikacji = nie ma klienta”: włączana datą w ustawieniach (2 tygodnie po starcie pilota), wcześniej ostrzeżenia.
+- ✅ Ograniczenia iOS (GPS i nagrywanie przy zablokowanym ekranie) — sprawdzimy w pilocie.
 
 ### Do potwierdzenia przy integracji CRM
 
-- Status „DZIAŁ PRAWNY” (widoczny w CRM po WIN-BACK) nie jest w tabeli — dziś trafia do „Do wyjaśnienia”. Rekomendacja: oznaczyć jako „negatywny”.
-- Statusy po „OCZEKIWANIE NA DECYZJĘ” (PREFINANSOWANIE) i dalsza ścieżka OZE 2.0 — dopiszemy z API (lista API zwraca tylko 100 najnowszych umów).
-- Skąd brać próg dochodowy klienta i nadmarżę (prawdopodobnie Konfigurator / audyt).
-- Pełna tabela inicjałów handlowców (dziś dane testowe).
+- Statusy po „OCZEKIWANIE NA DECYZJĘ” (PREFINANSOWANIE) i dalsza ścieżka OZE 2.0 — Kacper prześle zrzuty z konfiguracji CRM.
+- Konta w aplikacji dla osób z tabeli inicjałów (podpięcie `employeeId`, żeby przycisk „Potwierdź” działał dla prawdziwych osób).

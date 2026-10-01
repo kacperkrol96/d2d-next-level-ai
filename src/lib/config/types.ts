@@ -124,9 +124,17 @@ export interface ScopeCode {
 }
 
 /** Tabela: inicjały z numeru umowy → osoba (awaryjne źródło handlowca). */
+/**
+ * Tabela: inicjały z numeru umowy → osoba. TYLKO podpowiedź w kolejce
+ * „Do wyjaśnienia” (inicjały są zawodne: RS ≠ RSZ) — nigdy automatyczne
+ * przypisanie prowizji. Dopasowanie najdłuższego prefiksu.
+ */
 export interface InitialsCode {
   code: string;
-  employeeId: string;
+  personName: string;
+  /** Konto w aplikacji (null = osoba jeszcze bez konta / nieznana). */
+  employeeId: string | null;
+  note?: string;
 }
 
 export type StatusCategory = "in_progress" | "sales_earned" | "auditor_grey" | "auditor_earned" | "negative";
@@ -170,6 +178,23 @@ export interface BadgeDefinition {
   min: number;
 }
 
+/** Walidacja wag KPI w panelu admina. */
+export interface KpiWeightRules {
+  /** Wymagana suma wag (np. 20 → max 100 pkt). */
+  total: number;
+  /** Minimalna waga pojedynczego KPI. */
+  min: number;
+}
+
+/**
+ * Reguła „Nie ma w aplikacji = nie ma klienta”: prowizja i awans tylko dla klientów
+ * z leadem założonym w aplikacji przed umową. Przed datą — tylko ostrzeżenie.
+ */
+export interface AppLeadRule {
+  /** Data (YYYY-MM-DD), od której reguła blokuje; null = tylko ostrzeżenia. */
+  enforceFrom: string | null;
+}
+
 export interface AppConfig {
   salesLevels: SalesLevel[];
   auditorLevels: AuditorLevel[];
@@ -181,6 +206,8 @@ export interface AppConfig {
   fleetBands: FleetBand[];
   rules: CommissionRules;
   badges: BadgeDefinition[];
+  kpiWeightRules: KpiWeightRules;
+  appLeadRule: AppLeadRule;
   samVat: SamVatRule;
   /** Strefa czasowa firmy — daty okresów liczymy w czasie polskim. */
   timeZone: string;

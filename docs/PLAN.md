@@ -47,10 +47,11 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - [x] Trajektoria: droga każdej umowy klienta przez statusy (daty, obecny, kolejny krok, kroki do zielonej), wejście z klienta lub szarej kwoty, lista „Moje umowy”
 - [x] Powiadomienia „Biuro przesunęło umowę … do …” + karta „Ruchy biura”; odświeżanie przy otwarciu i co 15 min
 - [x] Warstwa danych `DataSource` (dane testowe; Supabase w etapie Dostępy)
+- [x] Poprawki po przeglądzie: „Dopłata do Duetu”; handlowiec ze źródeł aplikacja → CRM → historia (inicjały tylko podpowiedzią + „Potwierdź” w Mennicy); DZIAŁ PRAWNY = negatywny; próg i nadmarża jako ręczne pola przy kliencie; KPI „Raportowanie” dla obu ról, nowe wagi handlowca + walidacja wag; reguła „Nie ma w aplikacji…” z datą włączenia i ostrzeżeniami
 
 ## Etap 2 — Akademia
 
-- Ścieżki audytora i handlowca: skrypt, bank obiekcji, filmy, quizy
+- Ścieżki audytora i handlowca: skrypt, bank obiekcji, filmy, quizy (treści jako dane — przykładowe do podmiany)
 - Egzaminy sprawdzane automatycznie, etapy odblokowują się po zdaniu (animacja odblokowania)
 - Statystyki powodów z Radaru → Akademia (gdy będzie Radar)
 
@@ -65,7 +66,7 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 
 - Rozliczenie okresu, akceptacja/korekta zarządu z powodem i historią zmian, akceptacja osoby w Skarbcu
 - B2B: dane do faktury; Umowa zlecenia: rachunek PDF + wysyłka mailem
-- Obsługa kolejki „Do wyjaśnienia”, panel admina: tabele przypisań, stawki, terminy
+- Obsługa kolejki „Do wyjaśnienia”, panel admina: tabele przypisań (z kontami osób dla inicjałów), stawki, terminy, wagi KPI z walidacją (suma 20, min. 2), ręczne pola klienta (próg dochodowy, nadmarża), data włączenia reguły „Nie ma w aplikacji…”
 
 ## Etap 5 — Radar i Misje (+ leady, nagrania)
 
@@ -75,7 +76,8 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - Kolejka „Do wysłania do CRM” dla leadów i spotkań (wysyłka po uzyskaniu prawa zapisu w RRUP)
 - **Nagrywanie rozmów v1.0**: „Nagraj” → „Wyślij” na audycie i spotkaniu, formuła informacyjna + checkbox zgody, powiązanie z klientem/spotkaniem, lista nagrań w Wieży (per osoba, filtr), auto-usuwanie po X dniach (domyślnie 30)
 - Tryb offline (kolejka zapisów + nagrań, synchronizacja po odzyskaniu zasięgu)
-- Reguła „Nie ma w aplikacji = nie ma klienta” (przełącznik, domyślnie wyłączony) + wyjątki managera z powodem
+- Leady z aplikacji zasilają regułę „Nie ma w aplikacji = nie ma klienta” (logika gotowa od Etapu 1; włączenie datą w ustawieniach, 2 tygodnie po starcie pilota) + wyjątki managera z powodem
+- Dopasowanie lead ↔ klient w CRM (numer klienta po wysłaniu; wcześniej telefon + adres; niepewne → „Do wyjaśnienia”)
 
 ## Etap 6 — Terytorium i raportowanie w terenie
 
@@ -83,7 +85,7 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - **Odhaczenie domu w 2 sekundy** (GPS podświetla najbliższy dom), potwierdzenie obecności ~30 m
 - **Aktywne bloki czasu pracy** (min. 1 dom / 15 min — w ustawieniach), **„Zamknij dzień”** z obowiązkowym podsumowaniem
 - **Alert „puste przejścia”** w Wieży (GPS minął X domów, odhaczono Y — próg w ustawieniach)
-- **KPI „Raportowanie” z aplikacji** zamiast „Raportowanie CRM” u audytorów (+ testy)
+- **KPI „Raportowanie” z aplikacji** (% aktywnych bloków) — u audytorów i handlowców; dziś wartości testowe, w tym etapie liczone z Terytorium (+ testy)
 - Ograniczenie: GPS tylko przy otwartej aplikacji (PWA na iOS nie działa w tle) — weryfikacja w pilocie
 
 ## Etap Dostępy — logowanie Google, baza, podgląd Vercel (⚠️ PRZED PILOTEM — przypomnieć Kacprowi)

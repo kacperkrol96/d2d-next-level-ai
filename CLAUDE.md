@@ -15,15 +15,16 @@ Kacper (Next Level Energy) NIE jest programistą. Piszemy do niego prosto, po po
 3. **Każde obliczenie prowizji, KPI, floty i awansu ma testy automatyczne** (`npm test`).
 4. **Przed dużą zmianą architektury — zapytaj Kacpra.**
 5. **Zero liczb biznesowych na sztywno w kodzie.** Stawki, progi, wagi, procenty, statusy — tylko z `getConfig()` (`src/lib/config`). Funkcje w `src/lib/domain` przyjmują konfigurację jako parametr.
-6. **RODO:** nigdy nie pobieramy ani nie zapisujemy PESEL, numerów ksiąg wieczystych, numerów działek ani innych zbędnych danych z CRM.
-7. **CRM tylko przez źródło danych** (`getDataSource().crm()`) — dane testowe w kształcie RRUP, dopóki nie ma klucza.
-8. **Konfigurator:** nie kopiujemy logiki z `kacperkrol96/kalkulator-nle` — używamy jej z tamtego repo.
-9. **Wydawanie:** każdy etap na osobnej gałęzi → Pull Request. Scalenie do `main` TYLKO po akceptacji Kacpra (ogląda podgląd Vercel na iPadzie). Po etapie podaj: link do PR, link do podglądu, listę do przetestowania.
-10. **Zrzuty ekranu:** do każdego podsumowania etapu dołącz zrzuty (iPad poziomo + telefon) kluczowych widoków, zapisane w `docs/zrzuty/<etap>/`.
-11. **Dane tylko przez `getDataSource()`** (`src/lib/data`) — jedno miejsce podmiany na Supabase; nie licz prowizji na zgadywanych danych (nierozpoznane → „Do wyjaśnienia”).
-12. **Przed pilotem** przypomnij o etapie „Dostępy” (Supabase, logowanie Google, Vercel).
-13. **Przed prawdziwymi danymi** przypomnij Kacprowi: Supabase Pro + kopie zapasowe (lista w `docs/PLAN.md`).
-14. Nazwy paneli są obowiązkowe: Kokpit, Orbita, Skarbiec, Radar, Misje, Terytorium, Akademia, Konfigurator, Wieża, Konstelacja, Mennica.
+6. **Łącznik RRUP (MCP):** adres łącznika NIGDY nie trafia do repozytorium, kodu, dokumentacji ani zrzutów. Z łącznika korzystamy tylko do odczytu struktury danych, bez danych osobowych klientów.
+7. **RODO:** nigdy nie pobieramy ani nie zapisujemy PESEL, numerów ksiąg wieczystych, numerów działek ani innych zbędnych danych z CRM.
+8. **CRM tylko przez źródło danych** (`getDataSource().crm()`) — dane testowe w kształcie RRUP, dopóki nie ma klucza.
+9. **Konfigurator:** nie kopiujemy logiki z `kacperkrol96/kalkulator-nle` — używamy jej z tamtego repo.
+10. **Wydawanie:** każdy etap na osobnej gałęzi → Pull Request. Scalenie do `main` TYLKO po akceptacji Kacpra (ogląda podgląd Vercel na iPadzie). Po etapie podaj: link do PR, link do podglądu, listę do przetestowania.
+11. **Zrzuty ekranu:** do każdego podsumowania etapu dołącz zrzuty (iPad poziomo + telefon) kluczowych widoków, zapisane w `docs/zrzuty/<etap>/`.
+12. **Dane tylko przez `getDataSource()`** (`src/lib/data`) — jedno miejsce podmiany na Supabase; nie licz prowizji na zgadywanych danych (nierozpoznane → „Do wyjaśnienia”).
+13. **Przed pilotem** przypomnij o etapie „Dostępy” (Supabase, logowanie Google, Vercel).
+14. **Przed prawdziwymi danymi** przypomnij Kacprowi: Supabase Pro + kopie zapasowe (lista w `docs/PLAN.md`).
+15. Nazwy paneli są obowiązkowe: Kokpit, Orbita, Skarbiec, Radar, Misje, Terytorium, Akademia, Konfigurator, Wieża, Konstelacja, Mennica.
 
 ## Wygląd i ruch
 

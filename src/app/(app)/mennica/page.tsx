@@ -7,6 +7,7 @@ import { getDataSource } from "@/lib/data";
 import { daysUntil, previousPeriod, settlementPeriodFor, type SettlementPeriod } from "@/lib/domain/settlement";
 import { getOrbitData } from "@/lib/services/orbit";
 import { allIssues, loadContext } from "@/lib/services/portfolio";
+import { confirmSalesPerson } from "./actions";
 
 const shortDate = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "short", timeZone: "UTC" });
 const d = (day: string) => shortDate.format(new Date(`${day}T12:00:00Z`));
@@ -16,8 +17,10 @@ const issueLabel: Record<string, string> = {
   unknown_suffix: "Nierozpoznana końcówka numeru",
   unknown_status: "Status spoza tabeli statusów",
   no_sales_person: "Brak handlowca",
-  unknown_initials: "Nieznane inicjały w numerze",
+  sales_conflict: "Źródła wskazują różnych handlowców",
   no_auditor: "Brak audytora na umowie /A",
+  missing_income_tier: "Brak progu dochodowego",
+  no_app_lead: "Brak leadu w aplikacji",
 };
 
 function Countdown({ title, period, now, timeZone }: { title: string; period: SettlementPeriod; now: Date; timeZone: string }) {
@@ -87,6 +90,23 @@ export default async function MennicaPage() {
                 <div className="mt-0.5 text-xs text-muted">
                   {i.clientName} · {i.message}
                 </div>
+                {i.suggestion && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {i.suggestion.employeeId ? (
+                      <form action={confirmSalesPerson}>
+                        <input type="hidden" name="clientId" value={i.clientId} />
+                        <input type="hidden" name="employeeId" value={i.suggestion.employeeId} />
+                        <button className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium transition hover:bg-accent-soft">
+                          Potwierdź: {i.suggestion.personName}
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs text-muted">
+                        Podpowiedź: {i.suggestion.personName} — osoba bez konta w aplikacji
+                      </span>
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

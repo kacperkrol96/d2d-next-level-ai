@@ -9,8 +9,10 @@ export interface ClientTrajectoryView {
   clientName: string;
   city: string;
   crmUrl: string;
-  /** Prowizja osoby przy tym kliencie (jeśli jest). */
-  commission: CommissionEntry | null;
+  /** Pozycje prowizji osoby przy tym kliencie (Solo, „Dopłata do Duetu”, potrącenia). */
+  commissions: CommissionEntry[];
+  /** Ostrzeżenie reguły „Nie ma w aplikacji = nie ma klienta”. */
+  leadWarning: boolean;
   trajectories: (Trajectory & { scopeLabel: string | null })[];
   issues: string[];
   lastChangeAt: string | null;
@@ -28,14 +30,15 @@ export interface OfficeMove {
 async function views(user: AppUser, ctx: PortfolioContext): Promise<ClientTrajectoryView[]> {
   if (!user.crmEmployeeId || !user.track) return [];
   const orbit = await getOrbitData(user, ctx.now, ctx);
-  const byClient = new Map((orbit?.earnings.entries ?? []).map((e) => [e.clientId, e]));
+  const entries = orbit?.earnings.entries ?? [];
   return trajectoriesOf(user.crmEmployeeId, user.track, ctx)
     .map(({ client, trajectories }) => ({
       clientId: client.client.id,
       clientName: client.client.displayName,
       city: client.client.city,
       crmUrl: client.client.crmUrl,
-      commission: byClient.get(client.client.id) ?? null,
+      commissions: entries.filter((e) => e.clientId === client.client.id),
+      leadWarning: user.track === "sales" && client.leadRule === "warning",
       trajectories: trajectories.map((t, i) => ({ ...t, scopeLabel: client.agreements[i].scopeLabel })),
       issues: client.issues.map((i) => i.message),
       lastChangeAt: trajectories.map((t) => t.currentAt).filter((x): x is string => !!x).sort().at(-1) ?? null,

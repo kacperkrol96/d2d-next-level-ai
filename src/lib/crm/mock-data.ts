@@ -1,4 +1,6 @@
 import { seedConfig } from "@/lib/config/seed";
+import type { IncomeTier } from "@/lib/config/types";
+import type { AppClientData, ClientTerms, LeadRuleException, SalesAttribution } from "@/lib/data/types";
 import type { CrmAgreement, CrmClient, CrmEmployee, CrmStatusChange } from "./types";
 
 /**
@@ -23,7 +25,7 @@ export const mockEmployees: CrmEmployee[] = [
 ];
 
 const pathOf = (type: string) => seedConfig.crm.agreementTypes.find((t) => t.name === type)!.path;
-const isSideStatus = (s: string) => /NEGATYWNA|WIN-BACK|SPAD/.test(s);
+const isSideStatus = (s: string) => /NEGATYWNA|WIN-BACK|SPAD|DZIAŁ PRAWNY/.test(s);
 
 /**
  * Historia statusów: przejście głównej ścieżki od początku do `to`
@@ -60,9 +62,14 @@ interface SalesSpec {
 interface ClientSpec {
   name: string;
   city: string;
-  tier: CrmClient["incomeTier"];
-  /** Przypisany pracownik klienta (null = puste pole w API). */
+  /** Próg dochodowy (ręczne pole admina; null = nieuzupełniony). */
+  tier: IncomeTier | null;
+  /** Przypisany pracownik klienta w CRM (dziś łącznik zwraca puste → null). */
   assigned: string | null;
+  /** Źródło w aplikacji: oferta przyjęta w Radarze albo lead założony w aplikacji. */
+  app?: { source: "radar" | "lead"; employeeId: string };
+  /** Ostatni handlowiec z historii przypisań w CRM (null = 422 / brak). */
+  history?: string;
   initials: string;
   auditor: { id: string | null; to: string; endHoursAgo: number; initials: string } | null;
   sales: SalesSpec[];
@@ -99,30 +106,30 @@ const specs: ClientSpec[] = [
   { name: "Halina W.", city: "Ostrowiec", tier: "highest", assigned: null, initials: "MW",
     auditor: { id: "e-ola", to: "SUKCES", endHoursAgo: D(35), initials: "ON" },
     sales: [{ suffix: "KOT", to: "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW", endHoursAgo: D(9), gapHours: FAST_DOCS, valueNet: 28_000, surchargeNet: 800 }] },
-  { name: "Krzysztof D.", city: "Kielce", tier: "elevated", assigned: "e-marek", initials: "MW",
+  { name: "Krzysztof D.", city: "Kielce", tier: "elevated", assigned: null, app: { source: "radar", employeeId: "e-marek" }, initials: "MW",
     auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(25), initials: "TZ" },
     sales: [{ suffix: "TERM", to: "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW", endHoursAgo: 5, gapHours: SLOW_DOCS, valueNet: 89_000, surchargeNet: 4_500 }] },
-  { name: "Ewa P.", city: "Busko-Zdrój", tier: "highest", assigned: "e-marek", initials: "MW",
+  { name: "Ewa P.", city: "Busko-Zdrój", tier: "highest", assigned: null, app: { source: "lead", employeeId: "e-marek" }, initials: "MW",
     auditor: { id: "e-ola", to: "SUKCES", endHoursAgo: D(22), initials: "ON" },
     sales: [
       { suffix: "TERMO", to: "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW", endHoursAgo: 3, gapHours: FAST_DOCS, valueNet: 121_000, surchargeNet: 11_000 },
       { suffix: "ZGAZ", to: "WERYFIKACJA DOKUMENTÓW WFOŚ", endHoursAgo: D(2), gapHours: FAST_DOCS, valueNet: 35_000, surchargeNet: 2_000 },
     ],
     rek: { to: "W TRAKCIE FINANSOWANIA", endHoursAgo: D(8) } },
-  { name: "Wiesław N.", city: "Opatów", tier: "basic", assigned: "e-marek", initials: "MW",
+  { name: "Wiesław N.", city: "Opatów", tier: "basic", assigned: null, history: "e-marek", initials: "MW",
     auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(90), initials: "TZ" },
     sales: [{ suffix: "TERMO", to: "OCZEKIWANIE NA DECYZJĘ", endHoursAgo: D(40), gapHours: SLOW_DOCS, valueNet: 88_000, surchargeNet: 5_500 }] },
-  { name: "Danuta K.", city: "Staszów", tier: "elevated", assigned: "e-marek", initials: "MW",
+  { name: "Danuta K.", city: "Staszów", tier: "elevated", assigned: null, history: "e-marek", initials: "MW",
     auditor: { id: "e-ola", to: "SUKCES", endHoursAgo: D(75), initials: "ON" },
     sales: [{ suffix: "KOT", to: "OCZEKIWANIE NA DECYZJĘ", endHoursAgo: D(35), gapHours: FAST_DOCS, valueNet: 104_000, surchargeNet: 8_000 }] },
-  { name: "Grażyna T.", city: "Włoszczowa", tier: "basic", assigned: "e-marek", initials: "MW",
+  { name: "Grażyna T.", city: "Włoszczowa", tier: "basic", assigned: null, app: { source: "lead", employeeId: "e-marek" }, initials: "MW",
     auditor: { id: "e-ola", to: "SUKCES", endHoursAgo: D(60), initials: "ON" },
     sales: [{ suffix: "TERMO", to: "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW", endHoursAgo: D(25), gapHours: SLOW_DOCS, valueNet: 70_000, surchargeNet: 2_000,
       thenStatus: { status: "WIN-BACK", hoursAgo: 3 } }] },
-  { name: "Tadeusz B.", city: "Końskie", tier: "basic", assigned: "e-marek", initials: "MW",
+  { name: "Tadeusz B.", city: "Końskie", tier: "basic", assigned: null, app: { source: "radar", employeeId: "e-marek" }, initials: "MW",
     auditor: { id: "e-ola", to: "PRZEKAZANA DO PH", endHoursAgo: D(9), initials: "ON" },
     sales: [{ suffix: "TERMO", to: "PRZYGOTOWANIE DOKUMENTÓW WFOŚ", endHoursAgo: 26, gapHours: SLOW_DOCS, valueNet: 76_000, surchargeNet: 3_000 }] },
-  { name: "Zofia L.", city: "Jędrzejów", tier: "elevated", assigned: "e-marek", initials: "MW",
+  { name: "Zofia L.", city: "Jędrzejów", tier: "elevated", assigned: null, app: { source: "radar", employeeId: "e-marek" }, initials: "MW",
     auditor: { id: "e-tomek", to: "PRZEKAZANA DO PH", endHoursAgo: D(6), initials: "TZ" },
     sales: [{ suffix: "TERMO", to: "WERYFIKACJA UMOWY", endHoursAgo: 6, gapHours: [0, 30, 20, 20, 10], valueNet: 94_000, surchargeNet: 5_000 }] },
   { name: "Andrzej G.", city: "Starachowice", tier: "basic", assigned: "e-marek", initials: "MW",
@@ -134,7 +141,7 @@ const specs: ClientSpec[] = [
   { name: "Stanisław R.", city: "Pińczów", tier: "elevated", assigned: "e-marek", initials: "MW",
     auditor: { id: "e-ola", to: "W TRAKCIE POMIARÓW", endHoursAgo: D(1), initials: "ON" },
     sales: [] },
-  { name: "Leszek O.", city: "Chęciny", tier: "basic", assigned: "e-marek", initials: "MW",
+  { name: "Leszek O.", city: "Chęciny", tier: null, assigned: "e-marek", initials: "MW",
     auditor: { id: "e-ola", to: "DOKUMENTACJA POMIAROWA", endHoursAgo: 8, initials: "ON" },
     sales: [] },
   // ---- przypadki do wyjaśnienia ----
@@ -144,13 +151,16 @@ const specs: ClientSpec[] = [
   { name: "Elżbieta W.", city: "Daleszyce", tier: "elevated", assigned: "e-marek", initials: "MW",
     auditor: { id: "e-ola", to: "SUKCES", endHoursAgo: D(28), initials: "ON" },
     sales: [{ suffix: "TERMO", to: "REALIZACJA AUDYTU - GWD", endHoursAgo: D(6), gapHours: SLOW_DOCS, valueNet: 92_000, surchargeNet: 4_000,
-      thenStatus: { status: "DZIAŁ PRAWNY", hoursAgo: D(1) } }] },
+      thenStatus: { status: "NOWY STATUS W CRM", hoursAgo: D(1) } }] },
   { name: "Kazimierz P.", city: "Bodzentyn", tier: "basic", assigned: null, initials: "XY",
     auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(26), initials: "TZ" },
     sales: [{ suffix: "TERMO", to: "WERYFIKACJA DOKUMENTÓW WFOŚ", endHoursAgo: D(3), gapHours: SLOW_DOCS, valueNet: 77_000, surchargeNet: 2_500 }] },
   { name: "Renata S.", city: "Morawica", tier: "basic", assigned: "e-marek", initials: "MW",
     auditor: { id: "e-ola", to: "SUKCES", endHoursAgo: D(18), initials: "ON" },
     sales: [{ suffix: "TRMO", to: "WERYFIKACJA UMOWY", endHoursAgo: D(5), gapHours: SLOW_DOCS, valueNet: 86_000, surchargeNet: 3_500 }] },
+  { name: "Bogdan W.", city: "Suchedniów", tier: "elevated", assigned: "e-marek", app: { source: "lead", employeeId: "e-anna" }, initials: "MW",
+    auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(24), initials: "TZ" },
+    sales: [{ suffix: "TERMO", to: "WERYFIKACJA UMOWY", endHoursAgo: D(4), gapHours: SLOW_DOCS, valueNet: 90_000, surchargeNet: 3_000 }] },
   // ---------------- Anna (manager) ----------------
   { name: "Roman F.", city: "Kraków", tier: "elevated", assigned: "e-anna", initials: "AK",
     auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(30), initials: "TZ" },
@@ -167,7 +177,7 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-export interface MockCrmData {
+export interface MockCrmData extends AppClientData {
   clients: CrmClient[];
   agreements: CrmAgreement[];
 }
@@ -176,6 +186,9 @@ export function buildMockData(now: Date = new Date()): MockCrmData {
   const nowMs = now.getTime();
   const clients: CrmClient[] = [];
   const agreements: CrmAgreement[] = [];
+  const terms: ClientTerms[] = [];
+  const attributions: SalesAttribution[] = [];
+  const leadExceptions: LeadRuleException[] = [];
   let seq = 0;
 
   const number = (initials: string, at: number, suffix: string | null) => {
@@ -191,10 +204,16 @@ export function buildMockData(now: Date = new Date()): MockCrmData {
       id: clientId,
       displayName: spec.name,
       city: spec.city,
-      incomeTier: spec.tier,
       assignedEmployeeId: spec.assigned,
-      samVatFromOffer: spec.samVatFromOffer ?? null,
+      assignmentHistory: spec.history ? [{ employeeId: spec.history, at: new Date(nowMs - 60 * 24 * HOUR).toISOString() }] : null,
       crmUrl: `https://funduszremontowy.rrcrm.pl/customers/${clientId}`,
+    });
+
+    terms.push({
+      clientId,
+      incomeTier: spec.tier,
+      surchargeNet: spec.sales.length ? spec.sales.reduce((sum, s) => sum + s.surchargeNet, 0) : null,
+      samVatFromOffer: spec.samVatFromOffer ?? null,
     });
 
     if (spec.auditor) {
@@ -202,7 +221,7 @@ export function buildMockData(now: Date = new Date()): MockCrmData {
       const history = walk(AUDIT, spec.auditor.to, end, 40);
       agreements.push({
         id: `${clientId}-a`, clientId, number: number(spec.auditor.initials, Date.parse(history[0].at), "A"), type: AUDIT,
-        statusHistory: history, userId: spec.auditor.id, valueNet: 0, surchargeNet: 0,
+        statusHistory: history, userId: spec.auditor.id, valueNet: 0,
       });
     }
 
@@ -213,9 +232,18 @@ export function buildMockData(now: Date = new Date()): MockCrmData {
       agreements.push({
         id: `${clientId}-s${i + 1}`, clientId, number: number(s.initials ?? spec.initials, Date.parse(history[0].at), s.suffix), type: PREF,
         // pole „user” na umowie sprzedażowej często wskazuje audytora — nie używamy go do ustalenia handlowca
-        statusHistory: history, userId: spec.auditor?.id ?? null, valueNet: s.valueNet, surchargeNet: s.surchargeNet,
+        statusHistory: history, userId: spec.auditor?.id ?? null, valueNet: s.valueNet,
       });
     });
+
+    if (spec.app) {
+      // Lead/Radar: tuż przed podpisaniem pierwszej umowy (albo teraz, gdy umów brak).
+      const signed = agreements
+        .filter((a) => a.clientId === clientId && a.type === PREF)
+        .flatMap((a) => a.statusHistory.filter((h) => h.status === "UMOWA PODPISANA").map((h) => Date.parse(h.at)));
+      const at = (signed.length ? Math.min(...signed) : nowMs) - 48 * HOUR;
+      attributions.push({ clientId, employeeId: spec.app.employeeId, source: spec.app.source, at: new Date(at).toISOString() });
+    }
 
     if (spec.rek) {
       const end = nowMs - spec.rek.endHoursAgo * HOUR;
@@ -223,12 +251,12 @@ export function buildMockData(now: Date = new Date()): MockCrmData {
       if (spec.rek.thenStatus) history.push({ status: spec.rek.thenStatus, at: new Date(nowMs - 2 * HOUR).toISOString() });
       agreements.push({
         id: `${clientId}-r`, clientId, number: number(spec.initials, Date.parse(history[0].at), "REK"), type: OZE,
-        statusHistory: history, userId: spec.assigned, valueNet: 18_000, surchargeNet: 0,
+        statusHistory: history, userId: spec.assigned, valueNet: 18_000,
       });
     }
   });
 
-  return { clients, agreements };
+  return { clients, agreements, terms, attributions, leadExceptions };
 }
 
 /** Historia z dodanym „WYLICZENIE PROWIZJI” — do testów pomijania statusu. */

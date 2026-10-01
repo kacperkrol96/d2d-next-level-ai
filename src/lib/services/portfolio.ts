@@ -11,7 +11,7 @@ import {
   type Issue,
   type ResolvedClient,
 } from "@/lib/domain/agreements";
-import { auditorClientCommission, isSamVat, salesClientCommission, type CommissionState, type SalesAgreementInput } from "@/lib/domain/commission";
+import { auditorClientCommission, isSamVat, salesClientPayments, type PaymentAgreement, type PaymentState } from "@/lib/domain/commission";
 import { auditorLevelFor, levelTimeline, salesLevelFor, type ClientEvent } from "@/lib/domain/levels";
 import { formatPLN, roundMoney } from "@/lib/domain/money";
 import { isInPeriod, localDay, settlementPeriodFor, type SettlementPeriod } from "@/lib/domain/settlement";
@@ -22,9 +22,11 @@ import { buildTrajectory, statusChangesSince, type StatusChange, type Trajectory
  * potrącenia po spadku w status negatywny i trajektorie umów.
  */
 
-export type EntryState = CommissionState | "unresolved" | "clawback";
+export type EntryState = PaymentState | "unresolved";
 
 export interface CommissionEntry {
+  /** base = prowizja (Solo / audytor), duoTopUp = „Dopłata do Duetu”. */
+  kind: "base" | "duoTopUp";
   clientId: string;
   clientName: string;
   city: string;
@@ -42,14 +44,18 @@ export interface CommissionEntry {
   detail: string;
   /** Ile kroków do zielonej (najbliższa umowa), null = nie dotyczy. */
   stepsToGreen: number | null;
+  /** Ostrzeżenie (np. brak leadu w aplikacji, zanim reguła zacznie blokować). */
+  warning: string | null;
 }
 
 export interface Earnings {
   entries: CommissionEntry[];
   greenTotal: number;
   greyTotal: number;
-  /** Zielone w bieżącym okresie. */
+  /** Zielone w bieżącym okresie (razem z dopłatami do Duetu). */
   periodGreenTotal: number;
+  /** W tym „Dopłaty do Duetu” zielone w bieżącym okresie. */
+  periodDuoTopUps: number;
   /** Potrącenia w bieżącym okresie (dodatnia kwota). */
   periodDeductions: number;
   period: SettlementPeriod;
@@ -67,8 +73,14 @@ export interface PortfolioContext {
 export async function loadContext(now = new Date()): Promise<PortfolioContext> {
   const source = getDataSource();
   const crm = source.crm();
-  const [config, employees, rawClients, agreements] = await Promise.all([source.getConfig(), crm.listEmployees(), crm.listClients(), crm.listAgreements()]);
-  const clients = rawClients.map((c) => resolveClient(c, agreements, employees, config));
+  const [config, employees, rawClients, agreements, app] = await Promise.all([
+    source.getConfig(),
+    crm.listEmployees(),
+    crm.listClients(),
+    crm.listAgreements(),
+    source.appClientData(),
+  ]);
+  const clients = rawClients.map((c) => resolveClient(c, agreements, employees, config, { ...app, now }));
   return { config, employees, clients, agreements, now };
 }
 
@@ -90,25 +102,33 @@ function droppedAfter(agreements: CrmAgreement[], after: Date, ctx: PortfolioCon
 
 interface SalesFacts {
   rc: ResolvedClient;
-  inputs: SalesAgreementInput[];
+  agreements: PaymentAgreement[];
   samVat: boolean;
+  /** Pierwsze zazielenienie (klient liczy się do awansu od tej chwili). */
   greenAt: Date | null;
+  /** Utrata wszystkich zielonych umów (rezygnacja) — odejmuje klienta z licznika. */
   droppedAt: Date | null;
 }
 
 function salesFacts(rc: ResolvedClient, ctx: PortfolioContext): SalesFacts {
   const rules = ctx.config.crm;
-  const inputs: SalesAgreementInput[] = rc.salesAgreements.map((r) => ({
-    scope: r.scope as SalesAgreementInput["scope"],
-    category: r.category as StatusCategory,
-    valueNet: r.agreement.valueNet,
-    surchargeNet: r.agreement.surchargeNet,
-  }));
+  const agreements: PaymentAgreement[] = rc.salesAgreements.map((r) => {
+    const greenAt = reachedCategoryAt(r.agreement, ["sales_earned"], rules);
+    const negative = r.category === "negative";
+    return {
+      scope: r.scope as PaymentAgreement["scope"],
+      category: r.category as StatusCategory,
+      valueNet: r.agreement.valueNet,
+      greenAt,
+      droppedAt: greenAt && negative ? droppedAfter([r.agreement], greenAt, ctx) : null,
+    };
+  });
   const hasActiveRek = rc.agreements.some((r) => r.scope === "rek" && r.category !== "negative");
-  const greenAt = earliest(rc.salesAgreements.map((r) => reachedCategoryAt(r.agreement, ["sales_earned"], rules)));
-  const allNegative = inputs.length > 0 && inputs.every((i) => i.category === "negative");
-  const droppedAt = greenAt && allNegative ? droppedAfter(rc.salesAgreements.map((r) => r.agreement), greenAt, ctx) : null;
-  return { rc, inputs, samVat: isSamVat(rc.client, hasActiveRek, ctx.config), greenAt, droppedAt };
+  const greenAt = earliest(agreements.map((a) => a.greenAt));
+  const earned = agreements.filter((a) => a.greenAt);
+  const lostAll = earned.length > 0 && earned.every((a) => a.category === "negative");
+  const droppedAt = lostAll ? earned.map((a) => a.droppedAt).filter((d): d is Date => !!d).sort((x, y) => y.getTime() - x.getTime())[0] ?? null : null;
+  return { rc, agreements, samVat: isSamVat(rc.terms, hasActiveRek, ctx.config) ?? false, greenAt, droppedAt };
 }
 
 function salesEvents(employeeId: string, ctx: PortfolioContext): ClientEvent[] {
@@ -141,7 +161,7 @@ export function salesEntries(employeeId: string, ctx: PortfolioContext, timeline
   const { config } = ctx;
   return ctx.clients
     .filter((rc) => rc.salesId === employeeId && rc.salesAgreements.length > 0)
-    .map((rc) => {
+    .flatMap((rc): CommissionEntry[] => {
       const base = {
         clientId: rc.client.id,
         clientName: rc.client.displayName,
@@ -149,37 +169,34 @@ export function salesEntries(employeeId: string, ctx: PortfolioContext, timeline
         crmUrl: rc.client.crmUrl,
         status: rc.salesAgreements.map((r) => r.status ?? "—").join(" · "),
         stepsToGreen: minSteps(rc, "sales", ctx),
+        warning: rc.leadRule === "warning" ? "Ten klient nie ma leadu w aplikacji" : null,
       };
       if (isBlocked(rc, "sales")) {
-        return { ...base, state: "unresolved" as const, amount: 0, greenAt: null, droppedAt: null, level: currentLevel, detail: issueText(rc, "sales") };
+        return [{ ...base, kind: "base", state: "unresolved", amount: 0, greenAt: null, droppedAt: null, level: currentLevel, detail: issueText(rc, "sales") }];
       }
       const f = salesFacts(rc, ctx);
+      // Stawka wg poziomu sprzed klienta (z chwili pierwszego zazielenienia).
       const level = f.greenAt ? timeline(f.greenAt) : currentLevel;
       const levelConfig = config.salesLevels.find((l) => l.level === level)!;
-      const c = salesClientCommission({ agreements: f.inputs, samVat: f.samVat }, levelConfig, config);
-      const parts = [`${c.scope === "solo" ? "Solo" : "Duet"} ${formatPLN(c.base)}`];
-      if (c.samVat) parts.push("sam VAT −" + Math.round(config.rules.samVatReduction * 100) + "%");
-      if (c.surchargePart > 0) parts.push(`nadmarża ${formatPLN(c.surchargePart)}`);
-      parts.push(`poziom ${level}`);
-
-      if (c.state === "cancelled" && f.greenAt && f.droppedAt) {
-        // Spadek w status negatywny po zazielenieniu → potrącenie w kolejnym rozliczeniu.
-        const original = salesClientCommission(
-          { agreements: f.inputs.map((i) => ({ ...i, category: "sales_earned" as const })), samVat: f.samVat },
-          levelConfig,
-          config,
-        );
-        return { ...base, state: "clawback" as const, amount: -original.total, greenAt: f.greenAt.toISOString(), droppedAt: f.droppedAt.toISOString(), level, detail: `Potrącenie: status negatywny po wypłacie · ${parts.join(" · ")}` };
-      }
-      return {
-        ...base,
-        state: c.state,
-        amount: c.state === "cancelled" || c.state === "none" ? 0 : c.total,
-        greenAt: f.greenAt?.toISOString() ?? null,
-        droppedAt: null,
-        level,
-        detail: parts.join(" · "),
-      };
+      const payments = salesClientPayments({ agreements: f.agreements, samVat: f.samVat, surchargeNet: rc.terms.surchargeNet }, levelConfig, config);
+      const notes: string[] = [];
+      if (f.samVat) notes.push(`sam VAT −${Math.round(config.rules.samVatReduction * 100)}%`);
+      if (rc.terms.surchargeNet === null) notes.push("nadmarża nieuzupełniona");
+      notes.push(`poziom ${level}`);
+      return payments.map((p) => {
+        const label = p.kind === "base" ? "Solo" : "Dopłata do Duetu";
+        const detail = [label, ...notes].join(" · ");
+        return {
+          ...base,
+          kind: p.kind,
+          state: p.state,
+          amount: p.amount,
+          greenAt: p.greenAt?.toISOString() ?? null,
+          droppedAt: p.droppedAt?.toISOString() ?? null,
+          level,
+          detail: p.state === "clawback" ? `Potrącenie: status negatywny po wypłacie · ${detail}` : detail,
+        };
+      });
     });
 }
 
@@ -228,6 +245,8 @@ export function auditorEntries(employeeId: string, ctx: PortfolioContext, timeli
       crmUrl: rc.client.crmUrl,
       status: rc.auditAgreement.status ?? "—",
       stepsToGreen: minSteps(rc, "auditor", ctx),
+      kind: "base" as const,
+      warning: null,
     };
     if (isBlocked(rc, "auditor")) {
       entries.push({ ...base, state: "unresolved", amount: 0, greenAt: null, droppedAt: null, level: currentLevel, detail: issueText(rc, "auditor") });
@@ -236,16 +255,17 @@ export function auditorEntries(employeeId: string, ctx: PortfolioContext, timeli
     const greenAt = auditGreenAt(rc, ctx);
     const level = greenAt ? timeline(greenAt) : currentLevel;
     const levelConfig = config.auditorLevels.find((l) => l.level === level)!;
-    const salesClosed = !isBlocked(rc, "sales") && salesFacts(rc, ctx).inputs.some((i) => i.category === "sales_earned");
-    const c = auditorClientCommission({ auditCategory: rc.auditAgreement.category as StatusCategory, salesClosed, incomeTier: rc.client.incomeTier }, levelConfig);
+    const salesClosed = !isBlocked(rc, "sales") && salesFacts(rc, ctx).agreements.some((a) => a.category === "sales_earned");
+    const tier = rc.terms.incomeTier!; // brak progu blokuje audytora (missing_income_tier)
+    const c = auditorClientCommission({ auditCategory: rc.auditAgreement.category as StatusCategory, salesClosed, incomeTier: tier }, levelConfig);
     if (c.state === "none") continue;
-    const parts = [`Próg ${tierLabel[rc.client.incomeTier]} ${formatPLN(c.rate)}`];
+    const parts = [`Próg ${tierLabel[tier]} ${formatPLN(c.rate)}`];
     if (c.closingBonus > 0) parts.push(`bonus za zamknięcie ${formatPLN(c.closingBonus)}`);
     else if (c.potentialClosingBonus > 0) parts.push(`+${formatPLN(c.potentialClosingBonus)} gdy handlowiec zamknie`);
     parts.push(`poziom ${level}`);
     const droppedAt = c.state === "cancelled" && greenAt ? droppedAfter([rc.auditAgreement.agreement], greenAt, ctx) : null;
     if (droppedAt && greenAt) {
-      const original = auditorClientCommission({ auditCategory: "auditor_earned", salesClosed, incomeTier: rc.client.incomeTier }, levelConfig);
+      const original = auditorClientCommission({ auditCategory: "auditor_earned", salesClosed, incomeTier: tier }, levelConfig);
       entries.push({ ...base, state: "clawback", amount: -original.total, greenAt: greenAt.toISOString(), droppedAt: droppedAt.toISOString(), level, detail: `Potrącenie: status negatywny po wypłacie · ${parts.join(" · ")}` });
       continue;
     }
@@ -279,6 +299,7 @@ export function summarize(entries: CommissionEntry[], ctx: PortfolioContext): Ea
     greenTotal: roundMoney(green.reduce((s, e) => s + e.amount, 0)),
     greyTotal: roundMoney(entries.filter((e) => e.state === "grey").reduce((s, e) => s + e.amount, 0)),
     periodGreenTotal: roundMoney(green.filter((e) => inPeriod(e.greenAt)).reduce((s, e) => s + e.amount, 0)),
+    periodDuoTopUps: roundMoney(green.filter((e) => e.kind === "duoTopUp" && inPeriod(e.greenAt)).reduce((s, e) => s + e.amount, 0)),
     periodDeductions: roundMoney(-deductions.reduce((s, e) => s + e.amount, 0)),
     period,
     latestGreen,

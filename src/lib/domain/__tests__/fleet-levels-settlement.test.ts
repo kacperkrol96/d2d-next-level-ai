@@ -212,3 +212,15 @@ describe("poziom w chwili zazielenienia prowizji", () => {
     expect(levelTimeline([], levelFor, 3)(d(1))).toBe(3);
   });
 });
+
+describe("„Dopłata do Duetu” w rozliczeniu", () => {
+  it("osobna pozycja, objęta mnożnikiem KPI", () => {
+    const s = computeSettlement({ commissions: 3000, duoTopUps: 2000, kpiMultiplier: 0.9 });
+    expect(s.lines).toEqual([
+      { key: "commissions", label: "Prowizje", amount: 3000 },
+      { key: "duoTopUps", label: "Dopłaty do Duetu", amount: 2000 },
+      { key: "kpi", label: "Mnożnik KPI 90%", amount: -500 },
+    ]);
+    expect(s.payable).toBe(4500);
+  });
+});

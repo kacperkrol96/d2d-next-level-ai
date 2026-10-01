@@ -22,8 +22,7 @@ export default async function KlientPage(props: PageProps<"/skarbiec/klient/[id]
   const view = await getClientTrajectory(user, id);
   if (!view) notFound();
 
-  const c = view.commission;
-  const label = c ? stateLabel[c.state] : null;
+
   // Najpierw umowy, od których zależy prowizja tej osoby.
   const order = (scope: string | null) => (user.track === "auditor" ? (scope === "audit" ? 0 : 1) : scope === "audit" ? 1 : scope === "rek" ? 2 : 0);
   const trajectories = [...view.trajectories].sort((a, b) => order(a.scope) - order(b.scope));
@@ -45,19 +44,34 @@ export default async function KlientPage(props: PageProps<"/skarbiec/klient/[id]
             </a>
           </p>
         </div>
-        {c && label && (
-          <div className="text-right">
-            <div className={`text-xs ${label.tone}`}>{label.text}</div>
-            {c.state !== "unresolved" && (
-              <div className={`num text-3xl font-semibold ${label.tone}`}>
-                {c.amount < 0 ? "−" : ""}
-                {formatPLN(Math.abs(c.amount))}
-              </div>
-            )}
+        {view.commissions.length > 0 && (
+          <div className="flex flex-col items-end gap-2 text-right">
+            {view.commissions.map((c) => {
+              const label = stateLabel[c.state] ?? stateLabel.grey;
+              return (
+                <div key={`${c.kind}-${c.state}`}>
+                  <div className={`text-xs ${label.tone}`}>
+                    {c.kind === "duoTopUp" ? "Dopłata do Duetu · " : ""}
+                    {label.text}
+                  </div>
+                  {c.state !== "unresolved" && (
+                    <div className={`num font-semibold ${label.tone} ${c.kind === "duoTopUp" ? "text-xl" : "text-3xl"}`}>
+                      {c.amount < 0 ? "−" : ""}
+                      {formatPLN(Math.abs(c.amount))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </header>
 
+      {view.leadWarning && (
+        <Card className="mb-4 border-gold/20">
+          <p className="text-sm text-gold">Ten klient nie ma leadu w aplikacji. Po włączeniu reguły „Nie ma w aplikacji = nie ma klienta” prowizja i awans będą wymagały wyjątku managera.</p>
+        </Card>
+      )}
       {view.issues.length > 0 && (
         <Card className="mb-4 border-gold/30">
           <div className="flex items-start gap-3 text-sm text-gold">

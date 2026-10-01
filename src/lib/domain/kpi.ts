@@ -136,3 +136,20 @@ export function fiveStarReviewRate(clientsWithOffer: number, approvedReviews: nu
   if (clientsWithOffer === 0) return null;
   return roundMoney((Math.min(approvedReviews, clientsWithOffer) / clientsWithOffer) * 100);
 }
+
+// ---------- Walidacja wag (panel admina) ----------
+
+/**
+ * Wagi KPI: liczby całkowite, każda ≥ minimum, suma = wymagana (np. 20 → max 100 pkt).
+ * Zwraca listę błędów (pusta = poprawne).
+ */
+export function validateKpiWeights(definitions: readonly KpiDefinition[], rules: { total: number; min: number }): string[] {
+  const errors: string[] = [];
+  for (const d of definitions) {
+    if (!Number.isInteger(d.weight)) errors.push(`Waga „${d.label}” musi być liczbą całkowitą`);
+    if (d.weight < rules.min) errors.push(`Waga „${d.label}” nie może być mniejsza niż ${rules.min}`);
+  }
+  const sum = definitions.reduce((s, d) => s + d.weight, 0);
+  if (sum !== rules.total) errors.push(`Suma wag musi wynosić ${rules.total} (jest ${sum})`);
+  return errors;
+}
