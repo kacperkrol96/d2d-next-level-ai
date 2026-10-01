@@ -2,6 +2,7 @@ import type { AcademyProgress, AcademyStage, AcademyTrack, ExamAttempt } from "@
 import type { AppUser } from "@/lib/auth/users";
 import type { AppConfig, IncomeTier } from "@/lib/config/types";
 import type { CrmProvider } from "@/lib/crm/types";
+import type { ContractAcceptance, ContractTrack, ContractVersion } from "@/lib/contracts/types";
 import type { PersonEvent } from "@/lib/domain/cards";
 import type { PlanChange } from "@/lib/domain/safety";
 
@@ -90,6 +91,13 @@ export interface AppClientData {
 export interface DataSource {
   readonly kind: "mock" | "supabase";
   getConfig(): Promise<AppConfig>;
+  /** Zmiana ustawień przez admina (np. motyw zwoju kontraktu). */
+  updateConfig(patch: Partial<AppConfig>): Promise<void>;
+  /** Kontrakty: wersje (edytowane przez admina) i rejestr akceptacji. */
+  contractVersions(track?: ContractTrack): Promise<ContractVersion[]>;
+  publishContract(version: ContractVersion): Promise<void>;
+  contractAcceptances(): Promise<ContractAcceptance[]>;
+  acceptContract(acceptance: ContractAcceptance): Promise<void>;
   crm(): CrmProvider;
   listUsers(): Promise<AppUser[]>;
   findUser(id: string): Promise<AppUser | null>;

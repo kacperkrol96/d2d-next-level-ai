@@ -1,4 +1,5 @@
-import { AlertTriangle, CalendarClock, History } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CalendarClock, History, Settings } from "lucide-react";
 import { SettlementLines } from "@/components/settlement/SettlementLines";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
@@ -69,7 +70,12 @@ export default async function MennicaPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Mennica" subtitle="Rozliczenia zarządu — dane testowe" />
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader title="Mennica" subtitle="Rozliczenia zarządu — dane testowe" />
+        <Link href="/mennica/ustawienia" className="mt-1 flex shrink-0 items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-sm">
+          <Settings size={15} /> Ustawienia
+        </Link>
+      </div>
 
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <Countdown title="Okres do rozliczenia" period={closing} now={now} timeZone={config.timeZone} />

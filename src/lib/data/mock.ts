@@ -4,6 +4,9 @@ import { seedConfig } from "@/lib/config/seed";
 import { MockCrm } from "@/lib/crm";
 import { buildMockData } from "@/lib/crm/mock-data";
 import { academyStages } from "@/lib/academy/content";
+import { seedContracts } from "@/lib/contracts/seed";
+import type { ContractAcceptance, ContractTrack, ContractVersion } from "@/lib/contracts/types";
+import type { AppConfig } from "@/lib/config/types";
 import type { AcademyProgress, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
 import { recordEvent, type PersonEvent } from "@/lib/domain/cards";
 import type { PlanChange } from "@/lib/domain/safety";
@@ -26,8 +29,32 @@ export class MockDataSource implements DataSource {
   private decisions: SalesDecision[] = [];
   private academy = new Map<string, AcademyProgress>(seedAcademy());
 
+  private config: AppConfig = seedConfig;
+  private contracts: ContractVersion[] = seedContracts();
+  private acceptances: ContractAcceptance[] = seedAcceptances();
+
   async getConfig() {
-    return seedConfig;
+    return this.config;
+  }
+
+  async updateConfig(patch: Partial<AppConfig>) {
+    this.config = { ...this.config, ...patch };
+  }
+
+  async contractVersions(track?: ContractTrack) {
+    return this.contracts.filter((c) => !track || c.track === track).sort((a, b) => b.version - a.version);
+  }
+
+  async publishContract(version: ContractVersion) {
+    this.contracts.push(version);
+  }
+
+  async contractAcceptances() {
+    return [...this.acceptances].sort((a, b) => b.acceptedAt.localeCompare(a.acceptedAt));
+  }
+
+  async acceptContract(acceptance: ContractAcceptance) {
+    this.acceptances.push(acceptance);
   }
 
   crm() {
@@ -134,6 +161,18 @@ function seedDiscipline(): PersonEvent[] {
   return [
     { personId: "e-marek", kind: "late", at: isoAgo(12, 7), by: "u-anna" },
     { personId: "e-marek", kind: "yellow", reason: "no_gops", at: isoAgo(9, 15), by: "u-anna", automatic: false, note: "Klient bez zaświadczenia z GOPS na audycie" },
+  ];
+}
+
+/**
+ * Akceptacje testowe: Marek i Anna zaakceptowali kontrakt handlowca (wersja 1),
+ * Ola zobaczy zwój przy pierwszym wejściu.
+ */
+function seedAcceptances(): ContractAcceptance[] {
+  const sig = `data:image/png;base64,${"A".repeat(120)}`;
+  return [
+    { userId: "u-marek", track: "sales", version: 1, acceptedAt: isoAgo(20, 9), signature: sig },
+    { userId: "u-anna", track: "sales", version: 1, acceptedAt: isoAgo(40, 9), signature: sig },
   ];
 }
 
