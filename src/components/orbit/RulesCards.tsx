@@ -16,7 +16,7 @@ export function PlanCard({ plan }: { plan: NonNullable<OrbitData["plan"]> }) {
     <Card className="border-accent/30">
       <CardTitle hint={`ten miesiąc · ${plan.measurements} pomiarów`}>
         <span className="flex items-center gap-2">
-          <ShieldCheck size={16} className="text-accent-soft" /> System: {safety ? "Safety" : "Next Level"}
+          <ShieldCheck size={16} className="text-accent-soft" /> System:{" "}{safety ? "Safety" : "Next Level"}
         </span>
       </CardTitle>
       {safety ? (

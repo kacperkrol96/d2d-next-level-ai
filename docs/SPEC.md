@@ -58,13 +58,54 @@ To NIE jest prognoza zarobków.
 
 ## Akademia
 
-- **Ścieżki**: audytor → ścieżka audytora; handlowiec i manager → ścieżka handlowca; zarząd podgląda obie.
-- **Etap** = lekcje (skrypt, bank obiekcji z kartami „dotknij, by zobaczyć odpowiedź”, film, quiz ćwiczeniowy) + egzamin.
-- **Egzamin** sprawdzany automatycznie na serwerze (poprawne odpowiedzi nie trafiają do przeglądarki): jedno pytanie na ekran, pytania jedno- i wielokrotnego wyboru (zaliczone tylko przy dokładnie poprawnym zestawie), wynik, wyjaśnienia błędów.
-- **Odblokowywanie**: etap N+1 otwiera się po zdaniu egzaminu etapu N (animacja otwieranego zamka). Egzamin dostępny po ukończeniu lekcji etapu.
-- **Ustawienia admina**: próg zaliczenia (domyślnie 80%), przerwa po niezdanym egzaminie (domyślnie 30 min), wymóg ukończenia lekcji przed egzaminem.
-- **Treści jako dane** (docelowo edytowane w panelu admina / Supabase). W repozytorium są PRZYKŁADOWE treści do podmiany przez NLE; filmy — miejsce na link.
-- Postęp w Akademii zobaczy manager w Wieży (Etap 3). Statystyki powodów z Radaru zasilą Akademię po Etapie 5.
+- **Ścieżki**: terenowa **D1–D4** (audytor i handlowiec) + osobna **ścieżka managera** (manager i zarząd widzą obie).
+  - **D1 Fundament**: kontrakt (aktualna wersja ze zwoju), system wynagrodzeń, prezentacja Czyste Powietrze → **Egzamin D1**.
+  - **D2 Skrypty i obiekcje**: R1, R2 (+ wersja słowna), banki obiekcji (D2D, przyjazd na audyt), sceny, scenariusze, filmy → **Egzamin D2 + scenka** (checklista managera, 14 ocen 1–5, decyzja „Gotowy do D3”).
+  - **D3**: prospecting i wybór terenu + **Karta obserwacji D3** wypełniana przez managera w aplikacji.
+  - **D4**: **Karta obserwacji D4** (manager) z decyzją „Gotowy na samodzielność — start Ignition” (opcje decyzji do potwierdzenia).
+  - **Manager**: Podręcznik Managera (5 lekcji) → **Egzamin managerski**; **Launch Pad 90 dni** (szablon M1 Ignition / M2 Orbit / M3 Next Level, bez danych osobowych).
+- **Treści**: `docs/tresci/NLE_Onboarding_Komplet.md` (poprawiony wg SPEC — lista zmian `docs/tresci/KOREKTY.md`) → oczyszczone lekcje `src/content/akademia/*.md` → `npm run content`. Gdzie onboarding kłóci się ze SPEC — wygrywa SPEC. Maksymalne dofinansowanie zawsze 170 100 zł; audytor przed pomiarem NIE podaje klientowi żadnej kwoty (kwoty w egzaminach oznaczone „wiedza wewnętrzna — nie mówimy klientowi”).
+- **Egzaminy**: pytania zamknięte sprawdzane automatycznie na serwerze, otwarte ocenia manager (stan „czeka na ocenę”, punkty 0–max wg wzorca, komentarz). Próg punktowy = % z ustawień (D1 i D2 80%, managerski 70%) × maksimum. Po niezdanym — przerwa (ustawienie).
+- **BEZPIECZEŃSTWO**: klucze odpowiedzi nigdy nie trafiają do kodu wysyłanego na urządzenie — moduł `src/lib/academy/exams.ts` jest `server-only`, do przeglądarki idzie tylko wersja publiczna; test `academy-security` sprawdza graf importów plików „use client”, `npm run check:bundle` (w CI po buildzie) szuka znacznika kluczy w paczce przeglądarki. Po egzaminie osoba widzi, które pytania zamknięte były błędne — bez poprawnej odpowiedzi.
+- **Filmy (YouTube, niepubliczne)**: 02 → R1; 03 → bank D2D; 04–12 → R2 (6 tajemnic); 13 → bank przyjazd na audyt. Admin przypisuje linki (Mennica → Ustawienia). Własny odtwarzacz: bez kontrolek YouTube, bez „Obejrzyj na YouTube” i polecanych (nakładka + własny ekran końcowy), link niewidoczny, tylko po zalogowaniu, przewijanie do przodu tylko do obejrzanego miejsca. Lekcja zaliczona od **90%** obejrzanych sekund (ustawienie). Rejestr obejrzeń w panelu zespołu (docelowo w Wieży). Bez linku — atrapa (symulowany film).
+- **Panel zespołu** (manager / zarząd): postęp osób, egzaminy do oceny, karty do wypełnienia, rejestr filmów — `/akademia/zespol`.
+- **Odblokowywanie**: etap N+1 otwiera się po zaliczeniu etapu N (wszystkie lekcje + wszystkie bramki: egzamin / karta).
+
+## Kontrakt — zwój przy pierwszym uruchomieniu
+
+- Każdy audytor / handlowiec przed użyciem aplikacji czyta i akceptuje **swój kontrakt**. Przewinięcie do końca odblokowuje „Akceptuję”, potem **podpis palcem**.
+- **Motyw** wybiera admin: **Pergamin** (woskowa pieczęć), **Cyberpunk** (neonowy hologram, skanowanie), **Retro-gra** (piksele, neon, dźwięk „level start”).
+- **Rejestr akceptacji**: kto, kiedy, która wersja, podpis. Treść edytuje admin (Mennica → Ustawienia), każda publikacja = nowa wersja = **ponowna akceptacja**.
+- Kontrakt handlowca w materiałach nie istniał — wersja robocza na podstawie SPEC do weryfikacji prawnika. Rozbieżności kontrakt ↔ SPEC dla prawnika: `docs/tresci/ROZBIEZNOSCI_KONTRAKT_SPEC.md`.
+
+## Kartki
+
+- **Żółta**: spóźnienie, brak raportu w CRM / aplikacji, brak GOPS, obietnica kwoty przed pomiarem, presja na kliencie, KPI < 30 pkt.
+- **Czerwona**: 3 spóźnienia, 2 nieobecności albo 2 żółte kartki (w oknie dni z ustawień — domyślnie 90, do potwierdzenia).
+- Manager nadaje kartki w Wieży z uzasadnieniem; automatycznie: „brak raportu” (brak „Zamknij dzień” do terminu) i „KPI < 30” — najwyżej raz na dzień / okres. Historia w profilu osoby (Orbita).
+
+## Audytor: Safety albo Next Level
+
+- **Safety** (miesięcznie wg pomiarów): 0–4 → 0 zł (umowa zlecenia: co najmniej stawka minimalna × godziny z aplikacji — do potwierdzenia z prawnikiem, stawka w ustawieniach); 5–9 → 3 750 zł + 200 zł za każdy pomiar ponad 5; 10–14 → 7 000 zł + 250 zł ponad 10; 15+ → 10 000 zł + 300 zł ponad 15. Bez bonusu za zamknięcie. Mnożnik KPI na całą wypłatę Safety (ustawienie, domyślnie włączone).
+- **Pomiar** = umowa audytowa, która doszła do „DOKUMENTACJA POMIAROWA” lub dalej (założenie). Safety za miesiąc wypłacamy w okresie z pierwszym dniem następnego miesiąca (jak flota) — założenie.
+- **Next Level**: tabela 10 poziomów. Awans działa od **następnej** umowy (umowa dająca awans płatna wg starej stawki) — tak samo u handlowców.
+- Wybór na starcie; zmiana tylko Safety → Next Level (decyzja managera, z powodem); wyjątek: czasowy powrót na Safety (choroba / wypadek). Pomiary na Safety liczą się do poziomu.
+- **Orbita**: aktywny system, pasek do progu („jeszcze 2 pomiary do 7 000 zł”), podgląd „ile zarobiłbyś na Next Level”. Udział w nadmarży mają tylko handlowcy.
+
+## Rytm pracy
+
+- **Audytor — cykl 2-dniowy**: pon/śr/pt umawianie 12 leadów (co godzinę 9–20), wt/czw/sob 6 spotkań. Cel cyklu 12/6/2/1, tydzień 36 umówionych / 18 odbytych. Kokpit pokazuje cel dnia.
+- **Handlowiec**: bez stałego rytmu — Kokpit pokazuje oferty i spotkania domykające.
+- **Odprawy** (Misje): pon/śr/pt 8:30 + w każdy poniedziałek 8:00 w biurze.
+- **„Zamknij dzień” do 21:00** — brak = dzień niezaliczony + automatyczna żółta kartka.
+- **Nagrania**: minimum 20% odbytych spotkań (audytor i handlowiec) — licznik w Orbicie, alert w Wieży.
+- Wszystkie liczby w ustawieniach (`rhythm`).
+
+## Teren i leady
+
+- Ten sam rejon najwyżej raz na 30 dni (ostrzeżenie albo blokada — ustawienie). Checklista nowego rejonu: „Sołtys odwiedzony”.
+- Formularz leadu: zgoda RODO podpisana palcem + potwierdzenie dla klienta (SMS / e-mail); bez podpisu lead niekompletny.
+- Przy drzwiach najwyżej 3 pytania kwalifikacyjne; najwyżej 3 odbicia na obiekcję (treść + rubryka).
 
 ## Raportowanie w terenie (Terytorium + Misje)
 
@@ -125,7 +166,9 @@ Problem: ludzie nie odhaczają domów i nie wpisują leadów. Rozwiązanie w trz
 - **Próg dochodowy i nadmarża**: docelowo z Konfiguratora; do tego czasu ręczne pola przy kliencie (admin). Brak progu → „Do wyjaśnienia” tylko, gdy jest potrzebny (stawka audytora; reguła „sam VAT”, gdy oferta tego nie rozstrzyga). Brak nadmarży = 0 z adnotacją „nadmarża nieuzupełniona”.
 - **Kto jest handlowcem przy kliencie** — źródła w kolejności: (1) aplikacja: handlowiec przyjął ofertę w Radarze albo założył lead (główne źródło prawdy); (2) przypisany pracownik klienta w CRM (gdy łącznik zacznie zwracać to pole); (3) historia/logi przypisań klienta w CRM (gdy łącznik naprawi zdarzenia klienta — błąd 422); (4) inicjały z numeru — WYŁĄCZNIE podpowiedź w kolejce „Do wyjaśnienia”, do potwierdzenia przez admina jednym kliknięciem. Gdy źródła 1–3 wskazują różne osoby → „Do wyjaśnienia”, nigdy zgadywanie. Decyzja admina rozstrzyga.
 - **Audytor**: prowizja szara od „DOKUMENTACJA POMIAROWA”, zielona od „TWORZENIE OFERTY” (umowa audytowa /A). Stawka zależy od progu dochodowego klienta (podstawowy/podwyższony/najwyższy). Bonus za zamknięcie — gdy prowizja handlowca u tego klienta jest zielona. Poziom zdobyty raz zostaje na zawsze. Od poziomu 5 liczą się klienci struktury + aktywne osoby. Manager dostaje dyferencję.
-- **Stawka wg poziomu z chwili, gdy prowizja zrobiła się zielona** (poziom, który osoba miała tuż przed tym klientem).
+- **Stawka wg poziomu z chwili, gdy prowizja zrobiła się zielona** (poziom, który osoba miała tuż przed tym klientem) — awans działa od następnej umowy.
+- **Nadmarża uzupełniona po wypłacie** → różnica jako **„Dopłata nadmarży”** w najbliższym rozliczeniu (osobna pozycja, z mnożnikiem KPI). Potrącenie po spadku zwraca to, co faktycznie wypłacono.
+- **„Potwierdź” w kolejce „Do wyjaśnienia”** — tylko Zarząd / Admin, z historią (kto, kiedy, poprzednia wartość).
 - **Klienci do awansu**: rezygnacja / status negatywny po zaliczeniu odejmuje klienta z licznika, ale zdobyty poziom zostaje.
 - Wypłata = prowizja × mnożnik KPI. Wynagrodzenie za opiekę nad zespołem — bez mnożnika KPI.
 - **Spadek w status negatywny po zazieleniu** = potrącenie w rozliczeniu okresu, w którym nastąpił spadek (jeśli prowizja była zielona już w okresie wcześniejszym, czyli wypłacona). Potrącenie większe niż wypłata: wypłata 0 zł, reszta na kolejny okres; gdy osoba odchodzi — zarząd rozlicza resztę ręcznie w Mennicy.

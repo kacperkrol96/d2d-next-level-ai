@@ -25,6 +25,9 @@ Kacper (Next Level Energy) NIE jest programistą. Piszemy do niego prosto, po po
 13. **Przed pilotem** przypomnij o etapie „Dostępy” (Supabase, logowanie Google, Vercel).
 14. **Przed prawdziwymi danymi** przypomnij Kacprowi: Supabase Pro + kopie zapasowe (lista w `docs/PLAN.md`).
 15. Nazwy paneli są obowiązkowe: Kokpit, Orbita, Skarbiec, Radar, Misje, Terytorium, Akademia, Konfigurator, Wieża, Konstelacja, Mennica.
+16. **Klucze odpowiedzi egzaminów nigdy nie trafiają do kodu wysyłanego na urządzenie.** Tylko `src/lib/academy/exams.ts` (`server-only`), sprawdzanie tylko na serwerze; pilnują tego test `academy-security` i `npm run check:bundle`.
+17. **Treści Akademii** edytujemy w `src/content/akademia/*.md`, potem `npm run content`. Gdzie treści NLE kłócą się z `docs/SPEC.md` — wygrywa SPEC.
+18. **Kluczy (Supabase, Vercel, RRUP) Kacper wpisuje sam w ustawieniach Vercel/Supabase — nigdy w czacie.**
 
 ## Wygląd i ruch
 
@@ -47,4 +50,5 @@ Kacper (Next Level Energy) NIE jest programistą. Piszemy do niego prosto, po po
 
 - `npm run dev` — podgląd lokalny (http://localhost:3000)
 - `npm test` — testy obliczeń
+- `npm run content` — przebudowa treści Akademii; `npm run check:bundle` — po buildzie: brak kluczy egzaminów w paczce przeglądarki
 - `npm run lint`, `npm run typecheck`, `npm run build`

@@ -230,3 +230,9 @@ body {
     opacity: 0;
   }
 }
+.scroll-parchment .md h1,
+.scroll-parchment .md h2,
+.scroll-parchment .md h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  color: #5a2d0c;
+}

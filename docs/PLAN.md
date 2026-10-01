@@ -9,6 +9,7 @@
 
 ## ⚠️ Przed startem z prawdziwymi danymi
 
+- [ ] Vercel: przejście na **Pro** (zespół „Next Level Energy”, faktura na firmę z NIP) — PRZED PILOTEM
 - [ ] Supabase: przejście z planu darmowego na **Pro**
 - [ ] Supabase: włączone **kopie zapasowe** (Point-in-Time Recovery) i test odtworzenia
 - [ ] Vercel Pro: domena `app.nextlevelenergy.pl`, zmienne środowiskowe produkcji
@@ -59,9 +60,22 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - [ ] Prawdziwe treści od NLE (skrypty, obiekcje, filmy, pytania) — do wgrania; edycja treści w panelu admina (Etap 4)
 - [ ] Statystyki powodów z Radaru → Akademia (po Etapie 5)
 
+## Paczka zbiorcza (po Etapie 2) ✅
+
+- [x] „Dopłata nadmarży” (nadmarża wpisana po wypłacie); „Potwierdź” tylko dla Zarządu z historią (kto, kiedy, poprzednia wartość)
+- [x] Akademia D1–D4 + ścieżka managera na treściach NLE (poprawionych wg SPEC), egzaminy: zamknięte automatycznie, otwarte ocenia manager; scenka D2 i karty obserwacji D3/D4 wypełniane przez managera; Launch Pad 90 dni
+- [x] Klucze odpowiedzi tylko na serwerze — test grafu importów + kontrola paczki w CI
+- [x] Kontrakt jako zwój przy pierwszym uruchomieniu (3 motywy, podpis palcem, wersje, rejestr akceptacji, edycja admina) + lista rozbieżności dla prawnika
+- [x] Kartki: żółte (ręczne z powodem + automatyczne), czerwona (3 / 2 / 2), historia w Orbicie
+- [x] Safety / Next Level u audytora (Orbita: system, pasek do progu, podgląd Next Level; rozliczenie), awans od następnej umowy
+- [x] Rytm pracy: cele dnia w Kokpicie, odprawy w Misjach, „Zamknij dzień” do 21:00, licznik nagrań
+- [x] Reguły terenu i leadów (logika + testy; ekrany w Etapach 5–6)
+- [x] Filmy YouTube: własny odtwarzacz, ≥90% obejrzane, przypisywanie linków przez admina, rejestr obejrzeń, atrapy
+- [ ] Do potwierdzenia przez Kacpra: lista pytań w podsumowaniu paczki (PR)
+
 ## Etap 3 — Wieża + Konstelacja (z eskadrami)
 
-- Wieża: zespół, postępy w Akademii, alerty KPI poniżej minimum, zatwierdzanie opinii 5★ (screen + zdjęcie, zgoda, odczyt AI, usuwanie po 90 dniach)
+- Wieża: zespół, postępy w Akademii (oceny egzaminów, karty D2–D4, rejestr filmów — dziś w `/akademia/zespol`), nadawanie kartek z powodem, zmiana systemu Safety → Next Level, alert nagrań < 20%, alerty KPI poniżej minimum, zatwierdzanie opinii 5★ (screen + zdjęcie, zgoda, odczyt AI, usuwanie po 90 dniach)
 - Wieża — miejsca przygotowane pod etapy 5–6: alerty „puste przejścia”, wyjątki od reguły „Nie ma w aplikacji = nie ma klienta”, odsłuch nagrań
 - Konstelacja: struktura jako gwiazdozbiór, licznik „Twój zarobek ze struktury w tym miesiącu” (dyferencja + opieka nad zespołem), karta osoby
 - Eskadry: zewnętrzne grupy (np. prefiks ŁB), własny lider i pakiet zasad, przełącznik w panelu admina, historia po wyłączeniu
