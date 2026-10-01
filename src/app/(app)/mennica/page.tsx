@@ -1,4 +1,5 @@
-import { AlertTriangle, CalendarClock } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CalendarClock, History, Settings } from "lucide-react";
 import { SettlementLines } from "@/components/settlement/SettlementLines";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
@@ -56,12 +57,25 @@ export default async function MennicaPage() {
   const current = settlementPeriodFor(now, config.settlementPeriods, config.timeZone);
   const closing = previousPeriod(current, config.settlementPeriods, config.timeZone);
   const issues = allIssues(ctx);
-  const people = (await getDataSource().listUsers()).filter((u) => u.track);
+  const source = getDataSource();
+  const users = await source.listUsers();
+  const people = users.filter((u) => u.track);
+  const decisions = await source.salesDecisions();
+  const personName = (employeeId: string | null) =>
+    employeeId === null ? "nierozpoznany" : (ctx.employees.find((e) => e.id === employeeId)?.name ?? employeeId);
+  const userName = (id: string) => users.find((u) => u.id === id)?.name ?? id;
+  const clientName = (id: string) => ctx.clients.find((rc) => rc.client.id === id)?.client.displayName ?? id;
+  const stamp = new Intl.DateTimeFormat("pl-PL", { dateStyle: "short", timeStyle: "short", timeZone: config.timeZone });
   const previews = await Promise.all(people.map(async (u) => ({ user: u, orbit: await getOrbitData(u, now, ctx) })));
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Mennica" subtitle="Rozliczenia zarządu — dane testowe" />
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader title="Mennica" subtitle="Rozliczenia zarządu — dane testowe" />
+        <Link href="/mennica/ustawienia" className="mt-1 flex shrink-0 items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-sm">
+          <Settings size={15} /> Ustawienia
+        </Link>
+      </div>
 
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <Countdown title="Okres do rozliczenia" period={closing} now={now} timeZone={config.timeZone} />
@@ -113,14 +127,38 @@ export default async function MennicaPage() {
         )}
       </Card>
 
+      {decisions.length > 0 && (
+        <Card className="mb-4">
+          <CardTitle hint={`${decisions.length}`}>
+            <span className="flex items-center gap-2">
+              <History size={16} /> Historia potwierdzeń
+            </span>
+          </CardTitle>
+          <ul className="flex flex-col gap-2">
+            {decisions.map((h) => (
+              <li key={`${h.clientId}-${h.at}`} className="rounded-2xl bg-card-2 px-4 py-3 text-sm">
+                <div>
+                  {clientName(h.clientId)}: <span className="text-muted line-through">{personName(h.previousEmployeeId)}</span> → {personName(h.employeeId)}
+                </div>
+                <div className="text-xs text-muted">
+                  {userName(h.by)} · {stamp.format(new Date(h.at))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {previews.map(({ user, orbit }) =>
           orbit ? (
             <Card key={user.id}>
               <CardTitle hint={`${roleLabels[user.role]} · ${user.contract?.type ?? "—"}`}>{user.name}</CardTitle>
               <SettlementLines lines={orbit.settlement.lines} payable={orbit.settlement.payable} carryOver={orbit.settlement.carryOver} fleetMonths={orbit.settlement.fleetMonths} />
-              {orbit.yellowCards.length > 0 && (
-                <p className="mt-3 rounded-2xl bg-gold/[0.08] px-4 py-2 text-xs text-gold">Żółte kartki w historii: {orbit.yellowCards.length}</p>
+              {orbit.discipline.events.some((e) => e.kind === "yellow") && (
+                <p className={`mt-3 rounded-2xl px-4 py-2 text-xs ${orbit.discipline.red.red ? "bg-danger/10 text-danger" : "bg-gold/[0.08] text-gold"}`}>
+                  {orbit.discipline.red.red ? "Czerwona kartka · " : ""}Żółte kartki w historii: {orbit.discipline.events.filter((e) => e.kind === "yellow").length}
+                </p>
               )}
             </Card>
           ) : null,

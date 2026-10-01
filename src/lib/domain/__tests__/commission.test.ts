@@ -4,6 +4,7 @@ import {
   applyKpiMultiplier,
   auditorClientCommission,
   auditorDifferential,
+  commissionAmount,
   differential,
   isSamVat,
   salesClientCommission,
@@ -12,6 +13,7 @@ import {
   type PaymentAgreement,
   type SalesAgreementInput,
 } from "../commission";
+import { computeSettlement } from "../settlement";
 
 const sales = (level: number) => config.salesLevels.find((l) => l.level === level)!;
 const auditor = (level: number) => config.auditorLevels.find((l) => l.level === level)!;
@@ -182,6 +184,58 @@ describe("płatności: Solo od razu + „Dopłata do Duetu”", () => {
 
   it("wszystko negatywne, nic nie było zielone → anulowana bez potrącenia", () => {
     expect(pay([pa("thermo", "negative", null)])).toEqual([{ kind: "base", state: "cancelled", amount: 0, greenAt: null, droppedAt: null }]);
+  });
+});
+
+describe("„Dopłata nadmarży” — nadmarża uzupełniona po wypłacie", () => {
+  const d = (day: number) => new Date(Date.UTC(2026, 8, day, 12));
+  const pa = (category: PaymentAgreement["category"], greenAt: Date | null, droppedAt: Date | null = null): PaymentAgreement => ({
+    scope: "thermo",
+    category,
+    valueNet: 100_000,
+    greenAt,
+    droppedAt,
+  });
+  const lvl = sales(1);
+  const plain = commissionAmount("solo", [100_000], false, null, lvl, config).total;
+  const full = commissionAmount("solo", [100_000], false, 5_000, lvl, config).total;
+  const run = (agreements: PaymentAgreement[], setAt: Date | null) =>
+    salesClientPayments({ agreements, samVat: false, surchargeNet: 5_000, surchargeSetAt: setAt }, lvl, config);
+
+  it("wpis przed zazielenieniem — jedna płatność z nadmarżą", () => {
+    expect(run([pa(earned, d(10))], d(5))).toEqual([expect.objectContaining({ kind: "base", amount: full })]);
+    expect(run([pa(earned, d(10))], null)).toHaveLength(1);
+  });
+
+  it("wpis po zazieleniu — prowizja bez nadmarży + osobna „Dopłata nadmarży” od chwili wpisu", () => {
+    const r = run([pa(earned, d(10))], d(20));
+    expect(full).toBeGreaterThan(plain);
+    expect(r).toEqual([
+      expect.objectContaining({ kind: "base", state: "green", amount: plain }),
+      expect.objectContaining({ kind: "surchargeTopUp", state: "green", amount: full - plain, greenAt: d(20) }),
+    ]);
+  });
+
+  it("szara prowizja — nadmarża od razu w kwocie, bez dopłaty", () => {
+    const r = run([pa("in_progress", null)], d(20));
+    expect(r).toEqual([expect.objectContaining({ kind: "base", state: "grey", amount: full })]);
+  });
+
+  it("potrącenie zwraca to, co faktycznie wypłacono", () => {
+    // spadek po wpisie nadmarży: wypłacono prowizję + dopłatę → potrącenie pełnej kwoty
+    const after = run([pa("negative", d(10), d(25))], d(20));
+    expect(after).toEqual([
+      expect.objectContaining({ kind: "base", state: "clawback", amount: -full }),
+      expect.objectContaining({ kind: "surchargeTopUp", state: "green", amount: full - plain }),
+    ]);
+    // spadek przed wpisem: dopłaty nie było → potrącenie bez nadmarży
+    expect(run([pa("negative", d(10), d(15))], d(20))).toEqual([expect.objectContaining({ kind: "base", state: "clawback", amount: -plain })]);
+  });
+
+  it("rozliczenie: osobna pozycja „Dopłaty nadmarży” z mnożnikiem KPI", () => {
+    const s = computeSettlement({ commissions: 1000, surchargeTopUps: 200, kpiMultiplier: 0.75 });
+    expect(s.lines.map((l) => l.key)).toEqual(["commissions", "surchargeTopUps", "kpi"]);
+    expect(s.payable).toBe(900);
   });
 });
 

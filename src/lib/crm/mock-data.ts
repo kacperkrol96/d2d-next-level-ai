@@ -71,6 +71,8 @@ interface ClientSpec {
   /** Ostatni handlowiec z historii przypisań w CRM (null = 422 / brak). */
   history?: string;
   initials: string;
+  /** Nadmarża wpisana przez admina dopiero X godzin temu (po zazielenieniu → „Dopłata nadmarży”). */
+  surchargeSetHoursAgo?: number;
   auditor: { id: string | null; to: string; endHoursAgo: number; initials: string } | null;
   sales: SalesSpec[];
   rek?: { to: string; endHoursAgo: number; thenStatus?: string };
@@ -92,7 +94,7 @@ const specs: ClientSpec[] = [
       { suffix: "TERMO", to: "OCZEKIWANIE NA DECYZJĘ", endHoursAgo: D(30), gapHours: FAST_DOCS, valueNet: 98_000, surchargeNet: 6_000 },
       { suffix: "KOT", to: "OCZEKIWANIE NA DECYZJĘ", endHoursAgo: D(30), gapHours: FAST_DOCS, valueNet: 32_000, surchargeNet: 1_500 },
     ] },
-  { name: "Barbara M.", city: "Radom", tier: "elevated", assigned: "e-marek", initials: "MW",
+  { name: "Barbara M.", city: "Radom", tier: "elevated", assigned: "e-marek", initials: "MW", surchargeSetHoursAgo: 20,
     auditor: { id: "e-ola", to: "SUKCES", endHoursAgo: D(55), initials: "ON" },
     sales: [
       { suffix: "Termo", to: "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW", endHoursAgo: D(20), gapHours: SLOW_DOCS, valueNet: 112_000, surchargeNet: 14_000 },
@@ -219,6 +221,7 @@ export function buildMockData(now: Date = MOCK_EPOCH): MockCrmData {
       clientId,
       incomeTier: spec.tier,
       surchargeNet: spec.sales.length ? spec.sales.reduce((sum, s) => sum + s.surchargeNet, 0) : null,
+      surchargeSetAt: spec.surchargeSetHoursAgo ? new Date(nowMs - spec.surchargeSetHoursAgo * HOUR).toISOString() : null,
       samVatFromOffer: spec.samVatFromOffer ?? null,
     });
 

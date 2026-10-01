@@ -41,7 +41,9 @@ function EntryList({ entries, tone }: { entries: CommissionEntry[]; tone: Tone }
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-sm">
                 {e.clientName} <span className="text-xs text-muted">· {e.city}</span>
-                {e.kind === "duoTopUp" && <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] text-gold">Dopłata do Duetu</span>}
+                {e.kind !== "base" && (
+                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] text-gold">{e.kind === "duoTopUp" ? "Dopłata do Duetu" : "Dopłata nadmarży"}</span>
+                )}
               </div>
               <div className="truncate text-xs text-muted">
                 {tone === "grey" && steps(e.stepsToGreen) ? <span className="text-white/80">{steps(e.stepsToGreen)} · </span> : null}
@@ -79,6 +81,11 @@ export default async function SkarbiecPage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader title="Skarbiec" subtitle="Prowizje za klienta — kliknij klienta, by zobaczyć drogę jego umów" />
       <SkarbiecTabs active="prowizje" />
+      {orbit.plan?.active === "safety" && (
+        <p className="mb-4 rounded-2xl bg-accent/10 px-4 py-3 text-sm">
+          Jesteś na systemie <b>Safety</b> — wypłata zależy od liczby pomiarów w miesiącu (Orbita). Kwoty przy klientach poniżej to podgląd stawek Next Level.
+        </p>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-4">
         <Card>

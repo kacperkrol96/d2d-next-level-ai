@@ -63,3 +63,176 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Treść Markdown (kontrakt, lekcje) ---------- */
+.md {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+.md h1 {
+  font-size: 1.6rem;
+}
+.md h2 {
+  font-size: 1.3rem;
+}
+.md h3 {
+  font-size: 1.1rem;
+}
+.md p,
+.md ul,
+.md ol,
+.md blockquote {
+  margin: 0.6em 0;
+}
+.md ul {
+  list-style: disc;
+  padding-left: 1.3em;
+}
+.md ol {
+  list-style: decimal;
+  padding-left: 1.3em;
+}
+.md li {
+  margin: 0.25em 0;
+}
+.md blockquote {
+  border-left: 3px solid var(--color-accent-soft);
+  padding: 0.2em 0 0.2em 1em;
+  opacity: 0.9;
+}
+.md strong {
+  font-weight: 600;
+}
+.md hr {
+  border: 0;
+  border-top: 1px solid currentColor;
+  opacity: 0.15;
+  margin: 1.5em 0;
+}
+.md code {
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.15);
+}
+.md-table {
+  overflow-x: auto;
+  margin: 0.8em 0;
+}
+.md table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+  min-width: 100%;
+}
+.md th,
+.md td {
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* ---------- Zwój kontraktu: 3 motywy ---------- */
+.scroll-parchment {
+  --paper: #f3e6c4;
+  background: radial-gradient(ellipse at center, #f7ecd0 0%, #ead7a8 70%, #d9c08a 100%);
+  color: #3b2a14;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.scroll-parchment .rod {
+  background: linear-gradient(180deg, #7a4a1d, #4a2a0c 60%, #2e1a08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.scroll-cyberpunk {
+  background: linear-gradient(180deg, rgba(10, 4, 30, 0.92), rgba(4, 12, 28, 0.95));
+  color: #c8f7ff;
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  box-shadow:
+    0 0 24px rgba(0, 240, 255, 0.35),
+    inset 0 0 40px rgba(255, 0, 200, 0.12);
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.45);
+}
+.scroll-cyberpunk .md h1,
+.scroll-cyberpunk .md h2,
+.scroll-cyberpunk .md h3 {
+  color: #ff4fd8;
+  text-shadow: 0 0 10px rgba(255, 79, 216, 0.7);
+}
+.scroll-cyberpunk .scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(180deg, transparent, rgba(0, 240, 255, 0.18), transparent);
+  animation: scan 3.2s linear infinite;
+  pointer-events: none;
+}
+@keyframes scan {
+  from {
+    top: -80px;
+  }
+  to {
+    top: 100%;
+  }
+}
+.scroll-cyberpunk .holo {
+  animation: holo 4s ease-in-out infinite;
+}
+@keyframes holo {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.82;
+  }
+  52% {
+    opacity: 1;
+  }
+}
+.scroll-retro {
+  background: #0b0b16;
+  color: #b6ff9e;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  border: 4px solid #39ff14;
+  box-shadow:
+    0 0 0 4px #0b0b16,
+    0 0 0 8px #ff2e97,
+    0 0 30px rgba(57, 255, 20, 0.35);
+  image-rendering: pixelated;
+  border-radius: 0;
+}
+.scroll-retro .md h1,
+.scroll-retro .md h2,
+.scroll-retro .md h3 {
+  color: #ffe066;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: ui-monospace, Menlo, monospace;
+}
+.scroll-retro .blink {
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.scroll-parchment .md h1,
+.scroll-parchment .md h2,
+.scroll-parchment .md h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  color: #5a2d0c;
+}

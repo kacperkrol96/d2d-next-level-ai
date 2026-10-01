@@ -1,8 +1,10 @@
-import type { AcademyProgress, AcademyStage, AcademyTrack, ExamAttempt } from "@/lib/academy/types";
+import type { AcademyProgress, AcademyStage, AcademyTrack, ExamAttempt, ExamDef, FormSubmission } from "@/lib/academy/types";
 import type { AppUser } from "@/lib/auth/users";
 import type { AppConfig, IncomeTier } from "@/lib/config/types";
 import type { CrmProvider } from "@/lib/crm/types";
-import type { YellowCard } from "@/lib/domain/yellow-card";
+import type { ContractAcceptance, ContractTrack, ContractVersion } from "@/lib/contracts/types";
+import type { PersonEvent } from "@/lib/domain/cards";
+import type { PlanChange } from "@/lib/domain/safety";
 
 /** Dane do KPI, których nie liczymy z CRM (opinie 5★ z Wieży, aktywność audytora). */
 export interface KpiInputs {
@@ -25,6 +27,8 @@ export interface ClientTerms {
   incomeTier: IncomeTier | null;
   /** Nadmarża netto klienta (null = nieuzupełniona). */
   surchargeNet: number | null;
+  /** Kiedy admin wpisał nadmarżę (ISO). Wpis po zazielenieniu → „Dopłata nadmarży”. */
+  surchargeSetAt?: string | null;
   /** „Sam VAT” z oferty — ma pierwszeństwo przed regułą (null = brak oferty). */
   samVatFromOffer: boolean | null;
 }
@@ -40,6 +44,29 @@ export interface SalesAttribution {
   /** ISO — kiedy (dla leadu: data założenia, ważna dla reguły „Nie ma w aplikacji…”). */
   at: string;
   note?: string;
+}
+
+/** Dziennik pracy z aplikacji (Terytorium / Misje; dziś dane testowe). */
+export interface WorkLog {
+  /** Godziny pracy w bieżącym miesiącu (aktywne bloki) — minimum dla umowy zlecenia. */
+  hoursThisMonth: number;
+  /** Spotkania odbyte / nagrane w bieżącym miesiącu. */
+  meetingsHeld: number;
+  meetingsRecorded: number;
+  /** Dni pracy i godzina „Zamknij dzień” (ISO, null = nie zamknięto). */
+  days: { day: string; closedAt: string | null }[];
+  /** Dzisiejszy postęp (umówione leady / odbyte spotkania). */
+  today: { leads: number; meetings: number };
+}
+
+/** Wpis w historii potwierdzeń handlowca (Zarząd / Admin): kto, kiedy, poprzednia wartość. */
+export interface SalesDecision {
+  clientId: string;
+  employeeId: string;
+  /** Handlowiec przypisany wcześniej (null = nierozpoznany). */
+  previousEmployeeId: string | null;
+  by: string;
+  at: string;
 }
 
 /** Wyjątek managera od reguły „Nie ma w aplikacji = nie ma klienta”. */
@@ -64,20 +91,43 @@ export interface AppClientData {
 export interface DataSource {
   readonly kind: "mock" | "supabase";
   getConfig(): Promise<AppConfig>;
+  /** Zmiana ustawień przez admina (np. motyw zwoju kontraktu). */
+  updateConfig(patch: Partial<AppConfig>): Promise<void>;
+  /** Kontrakty: wersje (edytowane przez admina) i rejestr akceptacji. */
+  contractVersions(track?: ContractTrack): Promise<ContractVersion[]>;
+  publishContract(version: ContractVersion): Promise<void>;
+  contractAcceptances(): Promise<ContractAcceptance[]>;
+  acceptContract(acceptance: ContractAcceptance): Promise<void>;
   crm(): CrmProvider;
   listUsers(): Promise<AppUser[]>;
   findUser(id: string): Promise<AppUser | null>;
   kpiInputs(employeeId: string): Promise<KpiInputs>;
   /** Realizacja targetu spółki w bieżącym miesiącu (%), target wpisuje admin. */
   companyTargetPct(): Promise<number>;
-  saveYellowCard(card: YellowCard): Promise<void>;
+  /** Kartki i zdarzenia dyscyplinarne (żółte, spóźnienia, nieobecności) — historia osoby. */
+  addDisciplineEvent(event: PersonEvent): Promise<void>;
+  disciplineOf(personId: string): Promise<PersonEvent[]>;
+  /** Historia systemu wynagrodzenia audytora (Safety / Next Level). */
+  auditorPlanHistory(userId: string): Promise<PlanChange[]>;
+  workLog(employeeId: string): Promise<WorkLog>;
   appClientData(): Promise<AppClientData>;
   /** Admin potwierdza handlowca (np. podpowiedź z inicjałów) jednym kliknięciem. */
-  confirmSalesPerson(clientId: string, employeeId: string, adminId: string): Promise<void>;
+  confirmSalesPerson(decision: SalesDecision): Promise<void>;
+  /** Historia potwierdzeń (najnowsze pierwsze). */
+  salesDecisions(): Promise<SalesDecision[]>;
   /** Akademia: etapy ścieżki (treści), postęp osoby, zapis lekcji i podejść do egzaminu. */
   academyStages(track: AcademyTrack): Promise<AcademyStage[]>;
+  /** Egzamin z kluczem — TYLKO serwer (nigdy do przeglądarki). */
+  academyExam(examId: string): Promise<ExamDef | null>;
   academyProgress(userId: string): Promise<AcademyProgress>;
   markLessonDone(userId: string, lessonId: string): Promise<void>;
+  /** Obejrzana część filmu (zapisujemy najwyższą). */
+  saveVideoProgress(userId: string, lessonId: string, share: number): Promise<void>;
   saveExamAttempt(userId: string, attempt: ExamAttempt): Promise<void>;
-  yellowCardsOf(personId: string): Promise<YellowCard[]>;
+  /** Zapis oceny managera (podmiana podejścia o tym samym id). */
+  updateExamAttempt(userId: string, attempt: ExamAttempt): Promise<void>;
+  saveFormSubmission(submission: FormSubmission): Promise<void>;
+  /** Linki do filmów (klucz filmu → id filmu YouTube), przypisuje admin. */
+  videoLinks(): Promise<Record<string, string>>;
+  setVideoLink(key: string, youtubeId: string | null): Promise<void>;
 }
