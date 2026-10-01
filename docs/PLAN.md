@@ -75,12 +75,15 @@ Dostępy (Supabase, Vercel, Google) pomijamy do czasu, aż Kacper je poda. Warst
 - [x] Tryb próbny egzaminów do czasu weryfikacji kluczy (przełącznik per egzamin) + `docs/tresci/KLUCZE_DO_WERYFIKACJI.md`
 - [ ] Kacper: weryfikacja kluczy egzaminów i włączenie przełączników
 
-## Etap 3 — Wieża + Konstelacja (z eskadrami)
+## Etap 3 — Wieża + Konstelacja (z eskadrami) ✅
 
-- Wieża: zespół, postępy w Akademii (oceny egzaminów, karty D2–D4, rejestr filmów — dziś w `/akademia/zespol`), nadawanie kartek z powodem, zmiana systemu Safety → Next Level, alert nagrań < 20%, alerty KPI poniżej minimum, zatwierdzanie opinii 5★ (screen + zdjęcie, zgoda, odczyt AI, usuwanie po 90 dniach)
-- Wieża — miejsca przygotowane pod etapy 5–6: alerty „puste przejścia”, wyjątki od reguły „Nie ma w aplikacji = nie ma klienta”, odsłuch nagrań
-- Konstelacja: struktura jako gwiazdozbiór, licznik „Twój zarobek ze struktury w tym miesiącu” (dyferencja + opieka nad zespołem), karta osoby
-- Eskadry: zewnętrzne grupy (np. prefiks ŁB), własny lider i pakiet zasad, przełącznik w panelu admina, historia po wyłączeniu
+- [x] Wieża: alerty zespołu (czerwona kartka, KPI < 30, nagrania < 20%, egzaminy do oceny, karty do wypełnienia), karty osób (KPI, mnożnik, nagrania, kartki, Akademia)
+- [x] Wieża: nadawanie żółtych kartek z uzasadnieniem, spóźnień i nieobecności; zmiana systemu Safety → Next Level (i czasowy powrót) z powodem
+- [x] Wieża: opinie 5★ — screen + zdjęcie, odczyt AI (gwiazdki, nazwisko, data), zgoda na zdjęcie, zatwierdź / odrzuć z powodem, usuwanie plików po 90 dniach, licznik do KPI
+- [x] Konstelacja: gwiazdozbiór struktury (jasność = aktywność, czerwona obwódka = alert), licznik „Twój zarobek ze struktury” (dyferencja + opieka nad zespołem), poprzedni miesiąc, karta osoby
+- [x] Eskadry: klienci z prefiksem aktywnej eskadry (ŁB) poza kolejką „Do wyjaśnienia”, rozliczenie lidera wg pakietu zasad, przełącznik w Mennicy → Ustawienia z historią
+- [ ] Miejsca pod etapy 5–6: puste przejścia, wyjątki od reguły „Nie ma w aplikacji…”, odsłuch nagrań (zapowiedzi w Wieży)
+- [ ] Do potwierdzenia: dyferencja handlowców liczona z różnicy stawek Solo/Duet (bez udziału w nadmarży); kwoty opieki nad zespołem i pakiet zasad eskadry ŁB — wpisuje Zarząd
 
 ## Etap 4 — Mennica (akceptacje na danych testowych)
 

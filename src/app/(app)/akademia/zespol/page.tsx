@@ -9,7 +9,7 @@ import { getTeamAcademy } from "@/lib/services/academy";
 const dateFmt = new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "short", timeZone: "Europe/Warsaw" });
 
 export default async function ZespolAkademiaPage(props: PageProps<"/akademia/zespol">) {
-  const user = await requireRole(["manager", "admin"]);
+  const user = await requireRole(["sales", "manager", "admin"]);
   const team = await getTeamAcademy(user);
   const { ok } = await props.searchParams;
 

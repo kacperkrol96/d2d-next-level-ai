@@ -285,9 +285,20 @@ describe("reguła „Nie ma w aplikacji = nie ma klienta”", () => {
 
 describe("dane testowe przechodzą przez te same reguły", () => {
   const data = buildMockData(new Date("2026-10-01T10:00:00Z"));
-  const resolved = data.clients.map((c) =>
-    resolveClient(c, data.agreements, mockEmployees, config, { terms: data.terms, attributions: data.attributions, leadExceptions: data.leadExceptions, now: new Date("2026-10-01T10:00:00Z") }),
-  );
+  const squadrons = [{ id: "sq-lb", name: "Eskadra ŁB", prefix: "ŁB", leaderName: "Lider", rules: { perClient: 0, note: "" }, history: [{ at: "2026-01-01T00:00:00Z", active: true, by: "a" }] }];
+  const resolveAll = (sq: typeof squadrons) =>
+    data.clients.map((c) =>
+      resolveClient(c, data.agreements, mockEmployees, config, { terms: data.terms, attributions: data.attributions, leadExceptions: data.leadExceptions, now: new Date("2026-10-01T10:00:00Z"), squadrons: sq }),
+    );
+  const resolved = resolveAll(squadrons);
+
+  it("klienci z prefiksem aktywnej eskadry (ŁB) należą do eskadry — bez kolejki „Do wyjaśnienia”", () => {
+    const lb = resolved.filter((r) => r.squadronId === "sq-lb").map((r) => r.client.displayName).sort();
+    expect(lb).toEqual(["Alicja Z.", "Wojciech H."]);
+    // eskadra wyłączona (albo jeszcze nieistniejąca) przy podpisaniu umowy → zwykła kolejka
+    const off = resolveAll([{ ...squadrons[0], history: [{ at: "2026-12-01T00:00:00Z", active: true, by: "a" }] }]);
+    expect(off.find((r) => r.client.displayName === "Wojciech H.")!.issues[0]).toMatchObject({ kind: "no_sales_person", suggestion: { code: "ŁB" } });
+  });
 
   it("celowo błędni klienci trafiają do kolejki, reszta jest czysta", () => {
     const withIssues = resolved.filter((r) => r.issues.length > 0).map((r) => r.client.displayName).sort();

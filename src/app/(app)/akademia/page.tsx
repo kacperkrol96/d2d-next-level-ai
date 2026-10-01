@@ -18,7 +18,7 @@ export default async function AkademiaPage(props: PageProps<"/akademia">) {
   const user = await requireUser();
   const { track: requested } = await props.searchParams;
   const academy = await getAcademy(user, typeof requested === "string" ? requested : null);
-  const coach = user.role === "manager" || user.role === "admin";
+  const coach = user.role !== "auditor";
 
   return (
     <div className="mx-auto max-w-4xl">

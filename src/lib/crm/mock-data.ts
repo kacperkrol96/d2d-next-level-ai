@@ -163,6 +163,13 @@ const specs: ClientSpec[] = [
   { name: "Bogdan W.", city: "Suchedniów", tier: "elevated", assigned: "e-marek", app: { source: "lead", employeeId: "e-anna" }, initials: "MW",
     auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(24), initials: "TZ" },
     sales: [{ suffix: "TERMO", to: "WERYFIKACJA UMOWY", endHoursAgo: D(4), gapHours: SLOW_DOCS, valueNet: 90_000, surchargeNet: 3_000 }] },
+  // ---------------- Eskadra ŁB (zewnętrzna grupa, brak handlowca w aplikacji) ----------------
+  { name: "Wojciech H.", city: "Miechów", tier: "basic", assigned: null, initials: "ŁB",
+    auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(14), initials: "TZ" },
+    sales: [{ suffix: "TERMO", to: "W TRAKCIE SKŁADANIA WNIOSKU DO WFOŚiGW", endHoursAgo: D(3), gapHours: FAST_DOCS, valueNet: 95_000, surchargeNet: 4_000 }] },
+  { name: "Alicja Z.", city: "Proszowice", tier: "elevated", assigned: null, initials: "ŁB",
+    auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(12), initials: "TZ" },
+    sales: [{ suffix: "TERMO", to: "WERYFIKACJA UMOWY", endHoursAgo: D(2), gapHours: SLOW_DOCS, valueNet: 88_000, surchargeNet: 2_500 }] },
   // ---------------- Anna (manager) ----------------
   { name: "Roman F.", city: "Kraków", tier: "elevated", assigned: "e-anna", initials: "AK",
     auditor: { id: "e-tomek", to: "SUKCES", endHoursAgo: D(30), initials: "TZ" },

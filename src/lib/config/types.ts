@@ -266,6 +266,14 @@ export interface FieldRules {
   maxRebuttalsPerObjection: number;
 }
 
+/** Opinie 5★ (KPI handlowca): zatwierdza manager w Wieży, pliki usuwane po N dniach. */
+export interface ReviewRules {
+  /** Wymagana liczba gwiazdek z odczytu screena. */
+  requiredStars: number;
+  /** Po ilu dniach od decyzji usuwamy screenshot i zdjęcie. */
+  fileRetentionDays: number;
+}
+
 export type ContractScrollTheme = "parchment" | "cyberpunk" | "retro";
 
 export interface AppConfig {
@@ -287,6 +295,7 @@ export interface AppConfig {
   rhythm: WorkRhythm;
   field: FieldRules;
   contractScrollTheme: ContractScrollTheme;
+  reviews: ReviewRules;
   samVat: SamVatRule;
   /** Strefa czasowa firmy — daty okresów liczymy w czasie polskim. */
   timeZone: string;

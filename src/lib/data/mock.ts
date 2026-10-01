@@ -10,7 +10,9 @@ import type { AppConfig } from "@/lib/config/types";
 import { exams } from "@/lib/academy/exams";
 import type { AcademyProgress, AcademyTrack, ExamAttempt, FormSubmission } from "@/lib/academy/types";
 import { recordEvent, type PersonEvent } from "@/lib/domain/cards";
+import { approvedCount, purgeExpiredFiles, type FiveStarReview } from "@/lib/domain/reviews";
 import type { PlanChange } from "@/lib/domain/safety";
+import type { Squadron } from "@/lib/domain/squadron";
 import { MOCK_EPOCH } from "@/lib/crm/mock-data";
 import type { AppClientData, DataSource, KpiInputs, SalesAttribution, SalesDecision, WorkLog } from "./types";
 
@@ -71,7 +73,8 @@ export class MockDataSource implements DataSource {
   }
 
   async kpiInputs(employeeId: string): Promise<KpiInputs> {
-    return kpiInputs[employeeId] ?? { approvedFiveStarReviews: 0, reportingPct: null, auditorKpi: null };
+    const base = kpiInputs[employeeId] ?? { approvedFiveStarReviews: 0, reportingPct: null, auditorKpi: null };
+    return { ...base, approvedFiveStarReviews: base.approvedFiveStarReviews + approvedCount(this.reviews, employeeId) };
   }
 
   async companyTargetPct() {
@@ -88,6 +91,31 @@ export class MockDataSource implements DataSource {
 
   async auditorPlanHistory(userId: string): Promise<PlanChange[]> {
     return planHistory[userId] ?? [];
+  }
+
+  async savePlanChange(userId: string, change: PlanChange) {
+    planHistory[userId] = [...(planHistory[userId] ?? []), change];
+  }
+
+  private reviews: FiveStarReview[] = seedReviews();
+  private squadronList: Squadron[] = seedSquadrons();
+
+  async fiveStarReviews() {
+    // Pliki usuwane automatycznie po N dniach od decyzji (ustawienie).
+    this.reviews = purgeExpiredFiles(this.reviews, new Date(), this.config.reviews);
+    return [...this.reviews];
+  }
+
+  async saveFiveStarReview(review: FiveStarReview) {
+    this.reviews = this.reviews.some((r) => r.id === review.id) ? this.reviews.map((r) => (r.id === review.id ? review : r)) : [...this.reviews, review];
+  }
+
+  async squadrons() {
+    return [...this.squadronList];
+  }
+
+  async saveSquadron(squadron: Squadron) {
+    this.squadronList = this.squadronList.map((s) => (s.id === squadron.id ? squadron : s));
   }
 
   async workLog(employeeId: string): Promise<WorkLog> {
@@ -187,6 +215,34 @@ const workLogs: Record<string, WorkLog> = {
   "e-marek": { hoursThisMonth: 110, meetingsHeld: 9, meetingsRecorded: 3, days: [], today: { leads: 0, meetings: 2 } },
   "e-anna": { hoursThisMonth: 120, meetingsHeld: 6, meetingsRecorded: 2, days: [], today: { leads: 0, meetings: 1 } },
 };
+
+/** Obrazek-atrapa (bez prawdziwych zdjęć klientów). */
+const placeholder = (label: string, color: string) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="100%" height="100%" rx="16" fill="${color}"/><text x="50%" y="54%" font-family="sans-serif" font-size="22" fill="white" text-anchor="middle">${label}</text></svg>`)}`;
+
+/** Opinie testowe czekające na decyzję managera. */
+function seedReviews(): FiveStarReview[] {
+  const base = { employeeId: "e-marek", photoConsent: true, status: "pending" as const, decidedBy: null, decidedAt: null, rejectReason: null };
+  return [
+    { ...base, id: "rev-1", clientId: "c-001", clientName: "Jan K.", submittedAt: isoAgo(1, 15), ai: { stars: 5, reviewerName: "Jan K.", date: dayAgo(2) }, screenshot: placeholder("★★★★★ Google", "#3b3b4f"), photo: placeholder("Zdjęcie z klientem", "#4b2a5c") },
+    { ...base, id: "rev-2", clientId: "c-002", clientName: "Barbara M.", submittedAt: isoAgo(2, 11), ai: { stars: 4, reviewerName: "Barbara M.", date: dayAgo(3) }, screenshot: placeholder("★★★★☆ Google", "#3b3b4f"), photo: placeholder("Zdjęcie z klientem", "#4b2a5c") },
+    { ...base, id: "rev-3", clientId: "c-003", clientName: "Piotr S.", submittedAt: isoAgo(3, 9), photoConsent: false, ai: { stars: 5, reviewerName: null, date: null }, screenshot: placeholder("★★★★★ Google", "#3b3b4f"), photo: placeholder("Zdjęcie z klientem", "#4b2a5c") },
+  ];
+}
+
+/** Eskadra ŁB (prefiks z tabeli inicjałów) — włączona 60 dni temu; stawka lidera do uzupełnienia przez admina. */
+function seedSquadrons(): Squadron[] {
+  return [
+    {
+      id: "sq-lb",
+      name: "Eskadra ŁB",
+      prefix: "ŁB",
+      leaderName: "Łukasz Burliga",
+      rules: { perClient: 1000, note: "Stawka testowa — pakiet zasad ustala Zarząd" },
+      history: [{ at: isoAgo(60, 8), active: true, by: "u-kacper" }],
+    },
+  ];
+}
 
 /** Historia testowa: spóźnienie Marka i kartka managera. */
 function seedDiscipline(): PersonEvent[] {

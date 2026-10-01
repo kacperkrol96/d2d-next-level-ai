@@ -55,6 +55,8 @@ To NIE jest prognoza zarobków.
 - Kliknięcie w osobę: jej klienci, KPI, ile manager zarobił dzięki niej.
 - **Eskadra** = zewnętrzna grupa sprzedażowa (np. grupa Łukasza Burligi, umowy z prefiksem ŁB), NIE handlowiec z audytorami. Eskadra ma własnego lidera i własny pakiet zasad rozliczeń, włączana/wyłączana jednym przełącznikiem w panelu admina; historia zostaje po wyłączeniu.
 - Styl: minimalistyczny, ale ma nakręcać do zarabiania ze skali.
+- **Dyferencja** tylko w tej samej ścieżce (handlowiec ← handlowiec, audytor ← audytor). Handlowcy: różnica stawek Solo (prowizja) i różnica dopłat Duet − Solo („Dopłata do Duetu”), „sam VAT” obniża ją tak samo; bez dyferencji od nadmarży (do potwierdzenia). Poziom managera = poziom z chwili zazielenienia (nie niższy niż zdobyty). **Opieka nad zespołem** = kwota z poziomu managera (wpisuje Zarząd), gdy ma kogoś w strukturze.
+- **Eskadra — w aplikacji**: klient, którego umowa ma prefiks eskadry aktywnej w chwili podpisania, należy do eskadry (nie trafia do „Do wyjaśnienia”); lider dostaje kwotę za klienta z zieloną prowizją wg pakietu zasad. Przełącznik i historia w Mennicy → Ustawienia; po wyłączeniu nowe umowy wracają do kolejki.
 
 ## Akademia
 
@@ -257,7 +259,7 @@ Mechanika (obie role): każde KPI oceniane na poziomie I–V (1–5 pkt) × waga
 
 Wynik = suma(waga × poziom I–V), max 100 pkt; progi mnożnika bez zmian. **Walidacja wag w panelu admina** (obie role): liczby całkowite, suma = 20, żadna waga poniżej 2.
 
-- **Opinie 5★** — % klientów z ofertą, którzy mają zaliczoną opinię 5★. Zaliczenie: handlowiec wgrywa screenshot opinii 5★ klienta z Google oraz zdjęcie z klientem. AI wstępnie odczytuje ze screena liczbę gwiazdek, nazwisko i datę; manager zatwierdza lub odrzuca w Wieży jednym kliknięciem. Wymagany checkbox „klient zgodził się na zdjęcie”. Screenshot i zdjęcie usuwane 90 dni po zaliczeniu.
+- **Opinie 5★** — % klientów z ofertą, którzy mają zaliczoną opinię 5★. Zaliczenie: handlowiec wgrywa screenshot opinii 5★ klienta z Google oraz zdjęcie z klientem. AI wstępnie odczytuje ze screena liczbę gwiazdek, nazwisko i datę; manager zatwierdza lub odrzuca w Wieży jednym kliknięciem. Wymagany checkbox „klient zgodził się na zdjęcie”. Screenshot i zdjęcie usuwane 90 dni po decyzji (ustawienie). Bez zgody na zdjęcie — zatwierdzenie zablokowane; odczyt AI < 5★ — ostrzeżenie; odrzucenie zawsze z powodem.
 - **Komplet dokumentów (handlowiec + biuro)** — odpowiedzialność wspólna. Zaliczone, gdy od podpisania umowy („UMOWA PODPISANA”) do wejścia w pierwszy pozytywny status po weryfikacji („REALIZACJA AUDYTU - GWD” lub dalszy) minęło ≤ 24h. „WERYFIKACJA DOKUMENTOWA NEGATYWNA” po drodze liczy się do czasu. Okno 24h edytowalne w panelu; pilot startuje z 24h.
 - **Czas podpisania oferty** — średni czas od wejścia umowy audytowej /A w „PRZEKAZANA DO PH” do podpisania umowy sprzedażowej. Oferta niepodpisana po 7 dniach wchodzi do średniej jako 7 dni; każdy czas ograniczony do 7 dni.
 - KPI bez danych (np. handlowiec bez audytorów) jest pomijane, a wynik przeskalowany do 100 pkt.

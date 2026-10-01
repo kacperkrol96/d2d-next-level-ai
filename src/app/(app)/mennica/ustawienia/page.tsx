@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, FileSignature, KeyRound, Palette, PlayCircle, ScrollText } from "lucide-react";
+import { ArrowLeft, FileSignature, KeyRound, Palette, PlayCircle, Rocket, ScrollText } from "lucide-react";
+import { squadronActiveAt } from "@/lib/domain/squadron";
 import { academyStages, academyVideos } from "@/lib/academy/content";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { requireRole } from "@/lib/auth/session";
@@ -7,7 +8,7 @@ import type { ContractTrack } from "@/lib/contracts/types";
 import type { ContractScrollTheme } from "@/lib/config/types";
 import { getDataSource } from "@/lib/data";
 import { currentContract } from "@/lib/domain/contract";
-import { publishContract, setContractTheme, setExamVerified, setVideoLink } from "./actions";
+import { publishContract, setContractTheme, setExamVerified, setSquadronActive, setVideoLink } from "./actions";
 
 const themes: { key: ContractScrollTheme; label: string; description: string }[] = [
   { key: "parchment", label: "Pergamin", description: "Zwój z drewnianymi wałkami i woskową pieczęcią" },
@@ -20,13 +21,14 @@ const stamp = new Intl.DateTimeFormat("pl-PL", { dateStyle: "short", timeStyle: 
 export default async function UstawieniaPage({ searchParams }: PageProps<"/mennica/ustawienia">) {
   await requireRole(["admin"]);
   const source = getDataSource();
-  const [config, versions, acceptances, users, params, links] = await Promise.all([
+  const [config, versions, acceptances, users, params, links, squadrons] = await Promise.all([
     source.getConfig(),
     source.contractVersions(),
     source.contractAcceptances(),
     source.listUsers(),
     searchParams,
     source.videoLinks(),
+    source.squadrons(),
   ]);
   const name = (id: string) => users.find((u) => u.id === id)?.name ?? id;
   const error = typeof params.blad === "string" ? params.blad : null;
@@ -100,6 +102,38 @@ export default async function UstawieniaPage({ searchParams }: PageProps<"/menni
           </Card>
         );
       })}
+
+      <Card className="mb-4">
+        <div id="eskadry" />
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <Rocket size={16} className="text-accent-soft" /> Eskadry
+          </span>
+        </CardTitle>
+        <ul className="flex flex-col gap-2">
+          {squadrons.map((sq) => {
+            const on = squadronActiveAt(sq, new Date());
+            return (
+              <li key={sq.id}>
+                <form action={setSquadronActive} className="flex items-center justify-between gap-3 rounded-2xl bg-card-2 px-4 py-3">
+                  <input type="hidden" name="id" value={sq.id} />
+                  <input type="hidden" name="on" value={on ? "0" : "1"} />
+                  <span className="text-sm">
+                    {sq.name} · prefiks „{sq.prefix}” · lider {sq.leaderName}
+                    <span className="block text-[11px] text-muted">
+                      Historia: {sq.history.map((h) => `${h.active ? "wł." : "wył."} ${new Date(h.at).toLocaleDateString("pl-PL")} (${name(h.by)})`).join(" · ")}
+                    </span>
+                  </span>
+                  <button role="switch" aria-checked={on} aria-label={`Eskadra ${sq.name}`} className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-earned" : "bg-white/15"}`}>
+                    <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-6" : "left-1"}`} />
+                  </button>
+                </form>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-2 text-[11px] text-muted">Wyłączenie nie kasuje klientów ani rozliczeń — nowe umowy z prefiksem wracają do kolejki „Do wyjaśnienia”.</p>
+      </Card>
 
       <Card className="mb-4">
         <div id="egzaminy" />

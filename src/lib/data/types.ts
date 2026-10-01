@@ -4,7 +4,9 @@ import type { AppConfig, IncomeTier } from "@/lib/config/types";
 import type { CrmProvider } from "@/lib/crm/types";
 import type { ContractAcceptance, ContractTrack, ContractVersion } from "@/lib/contracts/types";
 import type { PersonEvent } from "@/lib/domain/cards";
+import type { FiveStarReview } from "@/lib/domain/reviews";
 import type { PlanChange } from "@/lib/domain/safety";
+import type { Squadron } from "@/lib/domain/squadron";
 
 /** Dane do KPI, których nie liczymy z CRM (opinie 5★ z Wieży, aktywność audytora). */
 export interface KpiInputs {
@@ -109,6 +111,14 @@ export interface DataSource {
   disciplineOf(personId: string): Promise<PersonEvent[]>;
   /** Historia systemu wynagrodzenia audytora (Safety / Next Level). */
   auditorPlanHistory(userId: string): Promise<PlanChange[]>;
+  /** Zmiana systemu (decyzja managera w Wieży). */
+  savePlanChange(userId: string, change: PlanChange): Promise<void>;
+  /** Opinie 5★ (Wieża: zatwierdzanie). */
+  fiveStarReviews(): Promise<FiveStarReview[]>;
+  saveFiveStarReview(review: FiveStarReview): Promise<void>;
+  /** Eskadry (zewnętrzne grupy sprzedażowe). */
+  squadrons(): Promise<Squadron[]>;
+  saveSquadron(squadron: Squadron): Promise<void>;
   workLog(employeeId: string): Promise<WorkLog>;
   appClientData(): Promise<AppClientData>;
   /** Admin potwierdza handlowca (np. podpowiedź z inicjałów) jednym kliknięciem. */

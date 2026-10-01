@@ -10,7 +10,7 @@ const pts = (n: number) => String(n).replace(".", ",");
 
 /** Ocena egzaminu przez managera: zamknięte policzone automatycznie, otwarte — punkty managera wg wzorca. */
 export default async function OcenaPage(props: PageProps<"/akademia/zespol/[personId]/ocena/[attemptId]">) {
-  const user = await requireRole(["manager", "admin"]);
+  const user = await requireRole(["sales", "manager", "admin"]);
   const { personId, attemptId } = await props.params;
   const { blad } = await props.searchParams;
   const data = await getReview(user, personId, attemptId);

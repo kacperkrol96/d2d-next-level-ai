@@ -46,6 +46,8 @@ export interface CommissionEntry {
   stepsToGreen: number | null;
   /** Ostrzeżenie (np. brak leadu w aplikacji, zanim reguła zacznie blokować). */
   warning: string | null;
+  /** Klient „sam VAT” (handlowiec) — dla dyferencji managera. */
+  samVat?: boolean;
 }
 
 export interface Earnings {
@@ -75,14 +77,15 @@ export interface PortfolioContext {
 export async function loadContext(now = new Date()): Promise<PortfolioContext> {
   const source = getDataSource();
   const crm = source.crm();
-  const [config, employees, rawClients, agreements, app] = await Promise.all([
+  const [config, employees, rawClients, agreements, app, squadrons] = await Promise.all([
     source.getConfig(),
     crm.listEmployees(),
     crm.listClients(),
     crm.listAgreements(),
     source.appClientData(),
+    source.squadrons(),
   ]);
-  const clients = rawClients.map((c) => resolveClient(c, agreements, employees, config, { ...app, now }));
+  const clients = rawClients.map((c) => resolveClient(c, agreements, employees, config, { ...app, now, squadrons }));
   return { config, employees, clients, agreements, now };
 }
 
@@ -201,6 +204,7 @@ export function salesEntries(employeeId: string, ctx: PortfolioContext, timeline
         const detail = [label, ...notes].join(" · ");
         return {
           ...base,
+          samVat: f.samVat,
           kind: p.kind,
           state: p.state,
           amount: p.amount,
@@ -393,4 +397,9 @@ export function offersWaiting(employeeId: string, ctx: PortfolioContext) {
     // Każda umowa poza audytem (także z nierozpoznaną końcówką) oznacza, że oferta została już podpisana.
     .filter(({ rc, handedOverAt }) => handedOverAt && !rc.agreements.some((r) => r.scope !== "audit" && enteredStatusAt(r.agreement, milestones.contractSigned)))
     .map(({ rc, handedOverAt }) => ({ clientId: rc.client.id, clientName: rc.client.displayName, city: rc.client.city, handedOverAt: handedOverAt!.toISOString() }));
+}
+
+/** Pierwsze zazielenienie umów termo / źródło klienta (np. klient eskadry). */
+export function reachedCategoryAtSafe(rc: ResolvedClient, ctx: PortfolioContext): Date | null {
+  return earliest(rc.salesAgreements.map((r) => reachedCategoryAt(r.agreement, ["sales_earned"], ctx.config.crm)));
 }
